@@ -300,8 +300,7 @@ npm run dev
 - [Google Cloud Console](https://console.cloud.google.com/)
 - [GitHub Developer Settings](https://github.com/settings/developers)
 - [JWT.io Debugger](https://jwt.io/)
-- [OAuth 2.0 Specification](https://tools.ietf.org/html/rfc6749)
-- [Passport.js Documentation](http://www.passportjs.org/docs/)
+- [API Key Best Practices](https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html)
 
 ## 🤝 Need Help?
 
