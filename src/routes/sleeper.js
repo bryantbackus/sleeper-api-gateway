@@ -1,7 +1,7 @@
 const express = require('express')
 const { body, param, query, validationResult } = require('express-validator')
 const sleeperService = require('../services/sleeperService')
-const { requireAuth, optionalAuth } = require('../middleware/auth')
+const { requireAPIKey, optionalAPIKey } = require('../middleware/simpleAuth')
 const { sleeperApiLimiter } = require('../middleware/rateLimiter')
 const logger = require('../config/logger')
 
@@ -26,7 +26,7 @@ const getDefaultUserId = () => {
 
 // User endpoints
 router.get('/user/:identifier', 
-  requireAuth,
+  requireAPIKey,
   sleeperApiLimiter,
   param('identifier').notEmpty().withMessage('User identifier is required'),
   handleValidationErrors,
@@ -49,7 +49,7 @@ router.get('/user/:identifier',
 
 // League endpoints
 router.get('/user/:userId/leagues/:sport/:season',
-  requireAuth,
+  requireAPIKey,
   sleeperApiLimiter,
   param('userId').notEmpty().withMessage('User ID is required'),
   param('sport').isIn(['nfl']).withMessage('Sport must be nfl'),
@@ -74,7 +74,7 @@ router.get('/user/:userId/leagues/:sport/:season',
 
 // Get leagues for default user (convenience endpoint)
 router.get('/leagues/:sport/:season',
-  requireAuth,
+  requireAPIKey,
   sleeperApiLimiter,
   param('sport').isIn(['nfl']).withMessage('Sport must be nfl'),
   param('season').isInt({ min: 2017, max: new Date().getFullYear() + 1 }).withMessage('Invalid season'),
@@ -98,7 +98,7 @@ router.get('/leagues/:sport/:season',
 )
 
 router.get('/league/:leagueId',
-  requireAuth,
+  requireAPIKey,
   sleeperApiLimiter,
   param('leagueId').notEmpty().withMessage('League ID is required'),
   handleValidationErrors,
@@ -120,7 +120,7 @@ router.get('/league/:leagueId',
 )
 
 router.get('/league/:leagueId/rosters',
-  requireAuth,
+  requireAPIKey,
   sleeperApiLimiter,
   param('leagueId').notEmpty().withMessage('League ID is required'),
   handleValidationErrors,
@@ -142,7 +142,7 @@ router.get('/league/:leagueId/rosters',
 )
 
 router.get('/league/:leagueId/users',
-  requireAuth,
+  requireAPIKey,
   sleeperApiLimiter,
   param('leagueId').notEmpty().withMessage('League ID is required'),
   handleValidationErrors,
@@ -164,7 +164,7 @@ router.get('/league/:leagueId/users',
 )
 
 router.get('/league/:leagueId/matchups/:week',
-  requireAuth,
+  requireAPIKey,
   sleeperApiLimiter,
   param('leagueId').notEmpty().withMessage('League ID is required'),
   param('week').isInt({ min: 1, max: 18 }).withMessage('Week must be between 1 and 18'),
@@ -187,7 +187,7 @@ router.get('/league/:leagueId/matchups/:week',
 )
 
 router.get('/league/:leagueId/winners_bracket',
-  requireAuth,
+  requireAPIKey,
   sleeperApiLimiter,
   param('leagueId').notEmpty().withMessage('League ID is required'),
   handleValidationErrors,
@@ -209,7 +209,7 @@ router.get('/league/:leagueId/winners_bracket',
 )
 
 router.get('/league/:leagueId/transactions/:round?',
-  requireAuth,
+  requireAPIKey,
   sleeperApiLimiter,
   param('leagueId').notEmpty().withMessage('League ID is required'),
   param('round').optional().isInt({ min: 1 }).withMessage('Round must be a positive integer'),
@@ -232,7 +232,7 @@ router.get('/league/:leagueId/transactions/:round?',
 )
 
 router.get('/league/:leagueId/traded_picks',
-  requireAuth,
+  requireAPIKey,
   sleeperApiLimiter,
   param('leagueId').notEmpty().withMessage('League ID is required'),
   handleValidationErrors,
@@ -255,7 +255,7 @@ router.get('/league/:leagueId/traded_picks',
 
 // Draft endpoints
 router.get('/user/:userId/drafts/:sport/:season',
-  requireAuth,
+  requireAPIKey,
   sleeperApiLimiter,
   param('userId').notEmpty().withMessage('User ID is required'),
   param('sport').isIn(['nfl']).withMessage('Sport must be nfl'),
@@ -279,7 +279,7 @@ router.get('/user/:userId/drafts/:sport/:season',
 )
 
 router.get('/league/:leagueId/drafts',
-  requireAuth,
+  requireAPIKey,
   sleeperApiLimiter,
   param('leagueId').notEmpty().withMessage('League ID is required'),
   handleValidationErrors,
@@ -301,7 +301,7 @@ router.get('/league/:leagueId/drafts',
 )
 
 router.get('/draft/:draftId',
-  requireAuth,
+  requireAPIKey,
   sleeperApiLimiter,
   param('draftId').notEmpty().withMessage('Draft ID is required'),
   handleValidationErrors,
@@ -323,7 +323,7 @@ router.get('/draft/:draftId',
 )
 
 router.get('/draft/:draftId/picks',
-  requireAuth,
+  requireAPIKey,
   sleeperApiLimiter,
   param('draftId').notEmpty().withMessage('Draft ID is required'),
   handleValidationErrors,
@@ -345,7 +345,7 @@ router.get('/draft/:draftId/picks',
 )
 
 router.get('/draft/:draftId/traded_picks',
-  requireAuth,
+  requireAPIKey,
   sleeperApiLimiter,
   param('draftId').notEmpty().withMessage('Draft ID is required'),
   handleValidationErrors,
@@ -368,7 +368,7 @@ router.get('/draft/:draftId/traded_picks',
 
 // NFL State endpoint
 router.get('/state/nfl',
-  optionalAuth, // NFL state doesn't require auth
+  optionalAPIKey, // NFL state doesn't require auth
   sleeperApiLimiter,
   async (req, res) => {
     try {

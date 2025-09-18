@@ -4,8 +4,6 @@ const express = require('express')
 const helmet = require('helmet')
 const cors = require('cors')
 const compression = require('compression')
-const session = require('express-session')
-const { passport } = require('./config/passport')
 const database = require('./config/database')
 const cacheService = require('./services/cacheService')
 const logger = require('./config/logger')
@@ -18,6 +16,7 @@ const indexRoutes = require('./routes/index')
 
 // Import middleware
 const { generalLimiter } = require('./middleware/rateLimiter')
+const { smartCache, cacheStats, clearCache } = require('./middleware/requestCache')
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -58,21 +57,7 @@ app.use(compression())
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
-// Session configuration (for OAuth flow)
-app.use(session({
-  secret: process.env.JWT_SECRET || 'default-secret',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
-}))
-
-// Initialize Passport
-app.use(passport.initialize())
-app.use(passport.session())
+// Note: Passport and session middleware removed - using simple API key authentication
 
 // Apply rate limiting
 app.use(generalLimiter)
@@ -88,10 +73,14 @@ app.use((req, res, next) => {
   next()
 })
 
-// Routes
+// Cache management routes (before main routes)
+app.get('/cache/stats', cacheStats)
+app.post('/cache/clear', clearCache)
+
+// Routes with caching
 app.use('/auth', authRoutes)
-app.use('/sleeper', sleeperRoutes)
-app.use('/players', playersRoutes)
+app.use('/sleeper', smartCache, sleeperRoutes)
+app.use('/players', smartCache, playersRoutes)
 app.use('/', indexRoutes)
 
 // Global error handler

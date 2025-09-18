@@ -1,18 +1,19 @@
 # Sleeper API Middleware
 
-A comprehensive API middleware server for the Sleeper fantasy football API with OAuth 2.0 authentication, intelligent caching, and enhanced player search capabilities. Perfect for building AI-powered fantasy football analysis tools.
+A fast, secure, and intelligent API middleware server for the Sleeper fantasy football API. Features simple API key authentication, smart caching, automatic retries, and enhanced player search. Perfect for building AI-powered fantasy football analysis tools.
 
 ## ✨ Features
 
-- **🔒 OAuth 2.0 Authentication** - Secure API access with JWT tokens
-- **📊 Complete Sleeper API Proxy** - Full access to all Sleeper endpoints
-- **⚡ Intelligent Caching** - Daily player data refresh at 6 AM EST
+- **🔑 Simple API Key Authentication** - No complex OAuth setup required
+- **📊 Complete Sleeper API Proxy** - Full access to all Sleeper endpoints with retry logic
+- **⚡ Smart Request Caching** - Automatic caching with configurable TTLs to reduce API calls
+- **🔄 Automatic Retries** - Exponential backoff for failed requests
 - **🔍 Enhanced Player Search** - Search by name, ID, position, team, or status
-- **🚀 Production Ready** - Dockerized with Nginx reverse proxy
-- **📈 Rate Limiting** - Respects Sleeper's API limits with built-in protection
-- **📝 Comprehensive Logging** - Winston-based logging with different levels
-- **🏥 Health Monitoring** - Built-in health checks and monitoring
-- **🔧 Configurable** - Environment-based configuration for easy deployment
+- **🚀 Production Ready** - Dockerized with Nginx reverse proxy and security hardening
+- **📈 Rate Limiting** - Multiple layers protecting both your server and Sleeper's API
+- **📝 Comprehensive Logging** - Winston-based logging with request tracking
+- **🏥 Health Monitoring** - Built-in health checks and cache statistics
+- **⚡ 2-Minute Setup** - Interactive setup script handles everything automatically
 
 ## 🏗️ Architecture
 
@@ -29,62 +30,80 @@ A comprehensive API middleware server for the Sleeper fantasy football API with 
                        └─────────────────┘
 ```
 
-## 🚀 Quick Start
+## 🚀 Super Quick Start
 
 ### Prerequisites
 
-- Node.js 18+ 
-- Docker & Docker Compose
-- Your Sleeper username/user ID
+- Node.js 18+
+- Your Sleeper username/user ID (find it at sleeper.app in your profile URL)
 
-### 1. Clone and Setup
+### Option 1: Instant Setup (Recommended)
+
+```bash
+git clone <your-repo-url>
+cd sleeper-api-middleware
+npm run quick-start
+```
+
+This single command will:
+1. Run the interactive setup (< 2 minutes)
+2. Install all dependencies  
+3. Start the server
+4. Generate your API key
+5. Show you how to test everything
+
+### Option 2: Step by Step
 
 ```bash
 git clone <your-repo-url>
 cd sleeper-api-middleware
 npm install
-npm run setup
+npm run setup    # Interactive configuration
+npm start        # Start the server
 ```
 
-The setup script will guide you through the configuration process.
-
-### 2. Development Mode
+### 🧪 Test Your Setup
 
 ```bash
-# Start in development mode with hot reload
-npm run dev
+# Health check (no auth required)
+curl http://localhost:3000/health
 
-# Or with Docker
-docker-compose -f docker-compose.dev.yml up
-```
+# Test with your API key (replace YOUR_API_KEY)
+curl -H "X-API-Key: YOUR_API_KEY" \
+  http://localhost:3000/sleeper/state/nfl
 
-### 3. Production Deployment
-
-```bash
-# Deploy to production
-chmod +x scripts/deploy.sh
-./scripts/deploy.sh
+# Search for a player
+curl -H "X-API-Key: YOUR_API_KEY" \
+  "http://localhost:3000/players/search/name?q=mahomes"
 ```
 
 ## 📚 API Documentation
 
 ### Authentication
 
-All endpoints (except `/health` and player data) require authentication via JWT token.
+Most endpoints require authentication via API key. Provide your API key using either:
 
-#### Get Authentication Token
+- **Header:** `X-API-Key: your-api-key-here`
+- **Query parameter:** `?api_key=your-api-key-here`
 
-**Development Only:**
+#### Getting Your API Key
+
+Your first API key is generated during setup. To create additional keys:
+
 ```bash
-curl -X POST http://localhost:3000/auth/dev-token \
+# Create new API key (requires master key)
+curl -X POST \
+  -H "X-Master-Key: YOUR_MASTER_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"userId": "your-user-id", "username": "your-username"}'
-```
+  -d '{"userId": "your-sleeper-id", "description": "My AI app key"}' \
+  http://localhost:3000/auth/create-key
 
-**Production OAuth Flow:**
-1. Redirect users to `/auth/login`
-2. Handle callback at `/auth/callback`
-3. Use returned token in `Authorization: Bearer <token>` header
+# Development: Create test key
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"userId": "test-user", "description": "Test key"}' \
+  http://localhost:3000/auth/dev-key
+```
 
 ### Core Endpoints
 
@@ -173,31 +192,67 @@ GET /players/cache/status
 POST /players/cache/refresh
 ```
 
+### Smart Caching & Performance
+
+The middleware includes intelligent caching to minimize API calls and improve performance:
+
+```bash
+# Check cache statistics
+curl http://localhost:3000/cache/stats
+
+# Clear all cache
+curl -X POST http://localhost:3000/cache/clear
+
+# Clear specific cache pattern
+curl -X POST "http://localhost:3000/cache/clear?pattern=players"
+
+# View cache headers in responses
+curl -I -H "X-API-Key: YOUR_KEY" \
+  http://localhost:3000/players/search/name?q=mahomes
+```
+
+**Cache TTLs:**
+- Player data: 30 minutes
+- League data: 10 minutes  
+- Matchups/transactions: 2 minutes
+- NFL state: 1 minute
+
+**Cache Features:**
+- Automatic expiration and cleanup
+- LRU eviction when full (1000 items max)
+- Smart cache keys including user context
+- Cache hit/miss headers for debugging
+- Retry logic with exponential backoff
+
 ## 🔧 Configuration
 
 ### Environment Variables
 
-Copy `env.example` to `.env` and configure:
+The setup script creates your `.env` file automatically, but you can also copy `env.example` to `.env` and configure manually:
 
 ```env
 # Server Configuration
-PORT=3000
 NODE_ENV=production
-DOMAIN=yourdomain.com
+PORT=3000
 
-# OAuth 2.0 (configure with your OAuth provider)
-OAUTH_CLIENT_ID=your_client_id
-OAUTH_CLIENT_SECRET=your_client_secret
-OAUTH_REDIRECT_URI=https://api.yourdomain.com/auth/callback
-JWT_SECRET=your_secret_key
+# Security Keys (auto-generated during setup)
+MASTER_KEY=your-auto-generated-master-key
+JWT_SECRET=your-auto-generated-jwt-secret
 
 # Your Sleeper Account
 DEFAULT_USER_ID=your_sleeper_user_id
 DEFAULT_USERNAME=your_sleeper_username
 
-# Cache Settings
+# Database & Cache
+DATABASE_PATH=./data/database.sqlite
 CACHE_REFRESH_TIME=06:00
 CACHE_TIMEZONE=America/New_York
+
+# Logging
+LOG_LEVEL=info
+
+# Optional: Disable caching for testing
+# DISABLE_CACHE=false
 ```
 
 ### Finding Your Sleeper User ID
@@ -348,9 +403,9 @@ Update your DNS to point to your server:
 const axios = require('axios')
 
 const api = axios.create({
-  baseURL: 'https://api.yourdomain.com',
+  baseURL: 'http://localhost:3000',  // or your domain
   headers: {
-    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+    'X-API-Key': 'YOUR_API_KEY_HERE'
   }
 })
 
@@ -362,14 +417,17 @@ const players = await api.get('/players/search/name?q=mahomes')
 
 // Get trending players
 const trending = await api.get('/players/nfl/trending/add')
+
+// Check cache statistics
+const cacheStats = await api.get('/cache/stats')
 ```
 
 ### Python
 ```python
 import requests
 
-headers = {'Authorization': 'Bearer YOUR_JWT_TOKEN'}
-base_url = 'https://api.yourdomain.com'
+headers = {'X-API-Key': 'YOUR_API_KEY_HERE'}
+base_url = 'http://localhost:3000'  # or your domain
 
 # Get league data
 response = requests.get(f'{base_url}/sleeper/leagues/nfl/2024', headers=headers)
@@ -378,6 +436,10 @@ leagues = response.json()
 # Search players
 response = requests.get(f'{base_url}/players/search/name?q=mahomes', headers=headers)
 players = response.json()
+
+# Get cached player data
+response = requests.get(f'{base_url}/players/nfl', headers=headers)
+all_players = response.json()
 ```
 
 ## 🚨 Troubleshooting
@@ -401,14 +463,26 @@ players = response.json()
    # Adjust rate limits in nginx/nginx.conf
    ```
 
-3. **Cache Not Updating**
+3. **Invalid API Key Errors**
    ```bash
-   # Force cache refresh
-   curl -X POST -H "Authorization: Bearer TOKEN" \
-     http://localhost:3000/players/cache/refresh
+   # Validate your API key
+   curl -H "X-API-Key: YOUR_KEY" \
+     http://localhost:3000/auth/validate
+   
+   # Check if key format is correct (64 hex characters)
+   echo "YOUR_KEY" | wc -c  # Should be 65 (64 + newline)
    ```
 
-4. **Database Issues**
+4. **Cache Not Updating**
+   ```bash
+   # Check cache status
+   curl http://localhost:3000/cache/stats
+   
+   # Force cache refresh
+   curl -X POST http://localhost:3000/cache/clear
+   ```
+
+5. **Database Issues**
    ```bash
    # Check data volume
    docker volume ls
