@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # Main API service
+  sleeper-api:
+    build: .
+    container_name: sleeper-api-middleware
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_PATH=/app/data/database.sqlite
+    env_file:
+      - .env
+    volumes:
+      - api_data:/app/data
+      - ./logs:/app/logs
+    networks:
+      - sleeper_network
+    depends_on:
+      - nginx
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Nginx reverse proxy
+  nginx:
+    build: ./nginx
+    container_name: sleeper-nginx
+    restart: unless-stopped
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./nginx/logs:/var/log/nginx
+      - certbot_data:/var/www/certbot
+    networks:
+      - sleeper_network
+    depends_on:
+      - sleeper-api
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # Optional: Certbot for SSL certificates (production)
+  certbot:
+    image: certbot/certbot
+    container_name: sleeper-certbot
+    restart: "no"
+    volumes:
+      - ./nginx/ssl:/etc/letsencrypt
+      - certbot_data:/var/www/certbot
+    command: certonly --webroot --webroot-path=/var/www/certbot --email your-email@domain.com --agree-tos --no-eff-email -d ${DOMAIN:-localhost} -d api.${DOMAIN:-localhost}
+    depends_on:
+      - nginx
+    profiles:
+      - production
+
+volumes:
+  api_data:
+    driver: local
+  certbot_data:
+    driver: local
+
+networks:
+  sleeper_network:
+    driver: bridge

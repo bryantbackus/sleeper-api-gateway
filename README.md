@@ -1,0 +1,454 @@
+# Sleeper API Middleware
+
+A comprehensive API middleware server for the Sleeper fantasy football API with OAuth 2.0 authentication, intelligent caching, and enhanced player search capabilities. Perfect for building AI-powered fantasy football analysis tools.
+
+## ✨ Features
+
+- **🔒 OAuth 2.0 Authentication** - Secure API access with JWT tokens
+- **📊 Complete Sleeper API Proxy** - Full access to all Sleeper endpoints
+- **⚡ Intelligent Caching** - Daily player data refresh at 6 AM EST
+- **🔍 Enhanced Player Search** - Search by name, ID, position, team, or status
+- **🚀 Production Ready** - Dockerized with Nginx reverse proxy
+- **📈 Rate Limiting** - Respects Sleeper's API limits with built-in protection
+- **📝 Comprehensive Logging** - Winston-based logging with different levels
+- **🏥 Health Monitoring** - Built-in health checks and monitoring
+- **🔧 Configurable** - Environment-based configuration for easy deployment
+
+## 🏗️ Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Nginx Proxy   │───▶│   Express API   │───▶│  Sleeper API    │
+│  (Rate Limiting)│    │   (Middleware)  │    │   (External)    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │
+                                ▼
+                       ┌─────────────────┐
+                       │   SQLite Cache  │
+                       │ (Player Data)   │
+                       └─────────────────┘
+```
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js 18+ 
+- Docker & Docker Compose
+- Your Sleeper username/user ID
+
+### 1. Clone and Setup
+
+```bash
+git clone <your-repo-url>
+cd sleeper-api-middleware
+npm install
+npm run setup
+```
+
+The setup script will guide you through the configuration process.
+
+### 2. Development Mode
+
+```bash
+# Start in development mode with hot reload
+npm run dev
+
+# Or with Docker
+docker-compose -f docker-compose.dev.yml up
+```
+
+### 3. Production Deployment
+
+```bash
+# Deploy to production
+chmod +x scripts/deploy.sh
+./scripts/deploy.sh
+```
+
+## 📚 API Documentation
+
+### Authentication
+
+All endpoints (except `/health` and player data) require authentication via JWT token.
+
+#### Get Authentication Token
+
+**Development Only:**
+```bash
+curl -X POST http://localhost:3000/auth/dev-token \
+  -H "Content-Type: application/json" \
+  -d '{"userId": "your-user-id", "username": "your-username"}'
+```
+
+**Production OAuth Flow:**
+1. Redirect users to `/auth/login`
+2. Handle callback at `/auth/callback`
+3. Use returned token in `Authorization: Bearer <token>` header
+
+### Core Endpoints
+
+#### Health Check
+```bash
+GET /health
+```
+
+#### API Information
+```bash
+GET /
+```
+
+### Sleeper API Proxy
+
+All Sleeper API endpoints are available with the same paths under `/sleeper`:
+
+#### User Data
+```bash
+GET /sleeper/user/:identifier
+GET /sleeper/leagues/nfl/2024
+GET /sleeper/user/:userId/leagues/nfl/2024
+```
+
+#### League Data
+```bash
+GET /sleeper/league/:leagueId
+GET /sleeper/league/:leagueId/rosters
+GET /sleeper/league/:leagueId/users
+GET /sleeper/league/:leagueId/matchups/:week
+GET /sleeper/league/:leagueId/winners_bracket
+GET /sleeper/league/:leagueId/transactions
+GET /sleeper/league/:leagueId/traded_picks
+```
+
+#### Draft Data
+```bash
+GET /sleeper/league/:leagueId/drafts
+GET /sleeper/draft/:draftId
+GET /sleeper/draft/:draftId/picks
+GET /sleeper/draft/:draftId/traded_picks
+```
+
+#### NFL State
+```bash
+GET /sleeper/state/nfl
+```
+
+### Enhanced Player Endpoints
+
+#### Get All Players (Cached)
+```bash
+GET /players/nfl
+```
+
+#### Trending Players (Cached)
+```bash
+GET /players/nfl/trending/add?limit=25
+GET /players/nfl/trending/drop?limit=25
+```
+
+#### Player Search
+```bash
+# Search by player ID
+GET /players/search/id/4046
+
+# Search by name
+GET /players/search/name?q=mahomes&limit=10
+
+# Search by position
+GET /players/search/position/QB?limit=50
+
+# Search by team
+GET /players/search/team/KC?limit=50
+
+# Get active players only
+GET /players/active?limit=100
+```
+
+#### Cache Management
+```bash
+# Get cache status
+GET /players/cache/status
+
+# Force cache refresh
+POST /players/cache/refresh
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Copy `env.example` to `.env` and configure:
+
+```env
+# Server Configuration
+PORT=3000
+NODE_ENV=production
+DOMAIN=yourdomain.com
+
+# OAuth 2.0 (configure with your OAuth provider)
+OAUTH_CLIENT_ID=your_client_id
+OAUTH_CLIENT_SECRET=your_client_secret
+OAUTH_REDIRECT_URI=https://api.yourdomain.com/auth/callback
+JWT_SECRET=your_secret_key
+
+# Your Sleeper Account
+DEFAULT_USER_ID=your_sleeper_user_id
+DEFAULT_USERNAME=your_sleeper_username
+
+# Cache Settings
+CACHE_REFRESH_TIME=06:00
+CACHE_TIMEZONE=America/New_York
+```
+
+### Finding Your Sleeper User ID
+
+1. Go to [sleeper.app](https://sleeper.app)
+2. Navigate to your profile
+3. Your user ID is in the URL: `sleeper.app/profile/[USER_ID]`
+
+## 🐳 Docker Deployment
+
+### Production
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+### Development
+```bash
+# Start with hot reload
+docker-compose -f docker-compose.dev.yml up
+```
+
+## 🔒 Security Features
+
+- **Rate Limiting**: Multiple layers of rate limiting
+- **CORS Protection**: Configurable CORS policies
+- **Security Headers**: Helmet.js security headers
+- **Input Validation**: Express-validator for all inputs
+- **JWT Authentication**: Secure token-based authentication
+- **Environment Isolation**: Separate dev/prod configurations
+
+## 📊 Monitoring & Logging
+
+### Health Checks
+- Application health: `/health`
+- Docker health checks built-in
+- Database connectivity monitoring
+- Cache status monitoring
+
+### Logging
+- Winston-based structured logging
+- Different log levels (error, warn, info, debug)
+- Request/response logging
+- Error tracking with stack traces
+
+### Log Files
+- `data/error.log` - Error-level logs only
+- `data/combined.log` - All log levels
+- Console output in development
+
+## ⚡ Performance Features
+
+### Caching Strategy
+- **Player Data**: Cached daily at 6 AM EST
+- **Trending Players**: Cached daily (add/drop separately)
+- **Smart Refresh**: Auto-refresh on startup if data is stale
+- **Background Updates**: Non-blocking cache refreshes
+
+### Rate Limiting
+- **General API**: 100 requests per 15 minutes
+- **Sleeper Proxy**: 50 requests per minute
+- **Auth Endpoints**: 10 requests per 15 minutes
+- **Nginx Layer**: Additional protection
+
+## 🛠️ Development
+
+### Scripts
+```bash
+npm run dev          # Development with hot reload
+npm run start        # Production start
+npm run setup        # Interactive setup
+npm run lint         # ESLint
+npm run lint:fix     # ESLint with fixes
+npm test             # Run tests
+```
+
+### Project Structure
+```
+src/
+├── config/          # Database, logging, passport configuration
+├── controllers/     # Route controllers (future expansion)
+├── middleware/      # Authentication, rate limiting middleware
+├── models/          # Data models (future expansion)
+├── routes/          # Express routes
+├── services/        # Business logic services
+├── utils/           # Utility functions
+└── server.js        # Main application entry
+
+nginx/               # Nginx configuration
+docker/              # Docker configurations
+scripts/             # Deployment and setup scripts
+```
+
+## 🔄 Cache Management
+
+The system automatically manages player data caching:
+
+- **Automatic Refresh**: Every day at 6 AM EST
+- **Startup Check**: Refreshes if data is stale on startup
+- **Manual Refresh**: Via API endpoint for administrators
+- **Background Processing**: Non-blocking cache updates
+
+### Cache Status
+Check cache status and force refresh:
+```bash
+# Get status
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+  http://localhost:3000/players/cache/status
+
+# Force refresh
+curl -X POST -H "Authorization: Bearer YOUR_TOKEN" \
+  http://localhost:3000/players/cache/refresh
+```
+
+## 🌐 Production Deployment
+
+### SSL/TLS Setup
+
+For production, you'll need SSL certificates:
+
+1. **Let's Encrypt (Recommended)**:
+   ```bash
+   # Update docker-compose.yml with your email
+   docker-compose --profile production up certbot
+   ```
+
+2. **Custom Certificates**:
+   Place your certificates in `nginx/ssl/`:
+   - `cert.pem` - Certificate file
+   - `key.pem` - Private key file
+
+### Domain Configuration
+
+Update your DNS to point to your server:
+- `yourdomain.com` → Your server IP
+- `api.yourdomain.com` → Your server IP
+
+## 🤝 Integration Examples
+
+### JavaScript/Node.js
+```javascript
+const axios = require('axios')
+
+const api = axios.create({
+  baseURL: 'https://api.yourdomain.com',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT_TOKEN'
+  }
+})
+
+// Get your leagues
+const leagues = await api.get('/sleeper/leagues/nfl/2024')
+
+// Search for a player
+const players = await api.get('/players/search/name?q=mahomes')
+
+// Get trending players
+const trending = await api.get('/players/nfl/trending/add')
+```
+
+### Python
+```python
+import requests
+
+headers = {'Authorization': 'Bearer YOUR_JWT_TOKEN'}
+base_url = 'https://api.yourdomain.com'
+
+# Get league data
+response = requests.get(f'{base_url}/sleeper/leagues/nfl/2024', headers=headers)
+leagues = response.json()
+
+# Search players
+response = requests.get(f'{base_url}/players/search/name?q=mahomes', headers=headers)
+players = response.json()
+```
+
+## 🚨 Troubleshooting
+
+### Common Issues
+
+1. **503 Service Unavailable**
+   ```bash
+   # Check container status
+   docker-compose ps
+   
+   # Check logs
+   docker-compose logs sleeper-api
+   ```
+
+2. **Rate Limiting Errors**
+   ```bash
+   # Check nginx logs
+   docker-compose logs nginx
+   
+   # Adjust rate limits in nginx/nginx.conf
+   ```
+
+3. **Cache Not Updating**
+   ```bash
+   # Force cache refresh
+   curl -X POST -H "Authorization: Bearer TOKEN" \
+     http://localhost:3000/players/cache/refresh
+   ```
+
+4. **Database Issues**
+   ```bash
+   # Check data volume
+   docker volume ls
+   
+   # Recreate database
+   docker-compose down -v
+   docker-compose up -d
+   ```
+
+### Log Analysis
+```bash
+# Follow logs in real-time
+docker-compose logs -f
+
+# Search logs for errors
+docker-compose logs | grep ERROR
+
+# Check specific service
+docker-compose logs sleeper-api
+```
+
+## 📝 License
+
+MIT License - see LICENSE file for details.
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📞 Support
+
+For issues and questions:
+- Create an issue in the GitHub repository
+- Check the troubleshooting section above
+- Review logs for error details
+
+---
+
+Built with ❤️ for fantasy football enthusiasts and AI developers.
