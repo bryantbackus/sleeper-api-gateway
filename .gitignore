@@ -19,6 +19,43 @@ pids
 coverage/
 *.lcov
 
+# Testing files and directories
+tests/
+test/
+__tests__/
+*.test.js
+*.spec.js
+jest.config.js
+jest.config.json
+.jest/
+
+# Test output and reports
+test-results/
+test-reports/
+junit.xml
+results.xml
+newman-report*.html
+coverage/
+.nyc_output/
+*.lcov
+mochawesome-report/
+
+# Test databases and data
+data/test-database.sqlite*
+*test*.sqlite*
+test-data/
+fixtures/
+
+# Postman/Newman files
+*.postman_collection.json
+*.postman_environment.json
+newman/
+
+# Test configuration files
+.testcafe/
+.pytest_cache/
+karma.conf.js
+
 # Logs
 logs
 *.log
@@ -121,3 +158,4 @@ docker-data/
 .Trashes
 ehthumbs.db
 Thumbs.db
+package-lock.json
