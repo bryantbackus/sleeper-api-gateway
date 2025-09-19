@@ -22,6 +22,11 @@
     "docker:logs": "docker-compose logs -f",
     "docker:restart": "docker-compose restart",
     "docker:clean": "docker-compose down -v --remove-orphans && docker system prune -f",
+    "ssl:generate": "node scripts/ssl-manager.js generate",
+    "ssl:renew": "node scripts/ssl-manager.js renew",
+    "ssl:status": "node scripts/ssl-manager.js status",
+    "ssl:enable": "node scripts/ssl-manager.js enable",
+    "ssl:disable": "node scripts/ssl-manager.js disable",
     "deploy": "npm run setup:docker",
     "quick-start": "npm run setup && npm install && npm start"
   },

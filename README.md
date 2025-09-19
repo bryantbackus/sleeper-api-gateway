@@ -294,6 +294,13 @@ npm run docker:restart
 
 # Clean up (removes volumes)
 npm run docker:clean
+
+# SSL certificate management
+npm run ssl:generate  # Generate SSL certificates
+npm run ssl:status    # Check certificate status
+npm run ssl:renew     # Renew certificates
+npm run ssl:enable    # Enable SSL
+npm run ssl:disable   # Disable SSL
 ```
 
 ### 🛠️ **Development with Docker**
@@ -404,20 +411,46 @@ curl -X POST -H "Authorization: Bearer YOUR_TOKEN" \
 
 ## 🌐 Production Deployment
 
-### SSL/TLS Setup
+### 🔒 SSL/HTTPS Setup
 
-For production, you'll need SSL certificates:
+The deployment script automatically handles SSL configuration. When you deploy with a custom domain, you'll be prompted for SSL setup.
 
-1. **Let's Encrypt (Recommended)**:
-   ```bash
-   # Update docker-compose.yml with your email
-   docker-compose --profile production up certbot
-   ```
+#### **Automatic SSL (Recommended)**
+```bash
+# During deployment, when prompted:
+Domain name: yourdomain.com
+Enable SSL/HTTPS with Let's Encrypt? (y/n): y
+Email for SSL certificate: your-email@domain.com
+```
 
-2. **Custom Certificates**:
-   Place your certificates in `nginx/ssl/`:
-   - `cert.pem` - Certificate file
-   - `key.pem` - Private key file
+#### **Manual SSL Management**
+```bash
+# Generate SSL certificates
+npm run ssl:generate
+
+# Check certificate status
+npm run ssl:status
+
+# Renew certificates (auto-renewal via cron recommended)
+npm run ssl:renew
+
+# Enable/disable SSL
+npm run ssl:enable
+npm run ssl:disable
+```
+
+#### **SSL Requirements**
+- ✅ **Valid domain** (not localhost)
+- ✅ **Domain points to your server** (DNS configured)
+- ✅ **Ports 80 & 443 open** (firewall configured)
+- ✅ **Valid email address** (for Let's Encrypt)
+
+#### **Custom Certificates**
+For custom SSL certificates, place them in `nginx/ssl/live/yourdomain.com/`:
+- `cert.pem` - Certificate file
+- `privkey.pem` - Private key file
+- `chain.pem` - Certificate chain
+- `fullchain.pem` - Full certificate chain
 
 ### Domain Configuration
 
