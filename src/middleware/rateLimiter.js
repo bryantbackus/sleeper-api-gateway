@@ -76,3 +76,6 @@ module.exports = {
   sleeperApiLimiter,
   authLimiter
 }
+
+// Note: Auth-aware rate limiters are available in authAwareRateLimit.js
+// This keeps this file focused on traditional rate limiting

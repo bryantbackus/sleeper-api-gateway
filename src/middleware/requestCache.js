@@ -6,8 +6,8 @@ class RequestCache {
     this.maxSize = 1000
     this.cleanupInterval = 60 * 1000 // 1 minute
     
-    // Start cleanup timer
-    setInterval(() => this.cleanupExpired(), this.cleanupInterval)
+    // Start cleanup timer (store reference for cleanup)
+    this.cleanupTimer = setInterval(() => this.cleanupExpired(), this.cleanupInterval)
     
     logger.info('Request cache initialized', { 
       maxSize: this.maxSize,
@@ -176,6 +176,15 @@ class RequestCache {
     
     logger.info('Cache cleared by pattern:', { pattern, entriesRemoved: cleared })
     return cleared
+  }
+
+  // Stop cleanup timer (for testing cleanup)
+  destroy() {
+    if (this.cleanupTimer) {
+      clearInterval(this.cleanupTimer)
+      this.cleanupTimer = null
+      logger.info('Cache cleanup timer stopped')
+    }
   }
 }
 

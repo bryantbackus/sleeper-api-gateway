@@ -19,14 +19,11 @@ pids
 coverage/
 *.lcov
 
-# Testing files and directories
+# Testing directories and files
 tests/
-test/
+test-results/
+test-reports/
 __tests__/
-*.test.js
-*.spec.js
-jest.config.js
-jest.config.json
 .jest/
 
 # Test output and reports
@@ -46,10 +43,9 @@ data/test-database.sqlite*
 test-data/
 fixtures/
 
-# Postman/Newman files
-*.postman_collection.json
-*.postman_environment.json
+# Newman output files (but keep our organized collections)
 newman/
+newman-report*
 
 # Test configuration files
 .testcafe/

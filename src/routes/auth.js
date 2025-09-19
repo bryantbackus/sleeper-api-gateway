@@ -218,39 +218,46 @@ router.post('/cleanup',
 )
 
 // Development endpoint for creating test API keys
-if (process.env.NODE_ENV === 'development') {
-  router.post('/dev-key', authLimiter, async (req, res) => {
-    try {
-      const { userId = 'dev-user', description = 'Development key' } = req.body
-      const apiKey = generateAPIKey()
-
-      await database.createAPIKey(apiKey, userId, description)
-
-      logger.warn('Development API key created:', { 
-        userId, 
-        keyPrefix: maskAPIKey(apiKey) 
-      })
-
-      res.json({
-        success: true,
-        message: 'Development API key created',
-        apiKey,
-        userId,
-        description,
-        usage: {
-          header: 'X-API-Key: ' + apiKey,
-          query: '?api_key=' + apiKey
-        },
-        warning: 'This endpoint is only available in development mode'
-      })
-    } catch (error) {
-      logger.error('Error creating dev API key:', error)
-      res.status(500).json({
-        error: 'Failed to create development key',
-        message: error.message
+router.post('/dev-key', authLimiter, async (req, res) => {
+  try {
+    // Check if in development mode
+    if (process.env.NODE_ENV !== 'development') {
+      return res.status(403).json({
+        success: false,
+        error: 'Forbidden',
+        message: 'This endpoint is only available in development mode'
       })
     }
-  })
-}
+
+    const { userId = 'dev-user', description = 'Development key' } = req.body
+    const apiKey = generateAPIKey()
+
+    await database.createAPIKey(apiKey, userId, description)
+
+    logger.warn('Development API key created:', { 
+      userId, 
+      keyPrefix: maskAPIKey(apiKey) 
+    })
+
+    res.json({
+      success: true,
+      message: 'Development API key created',
+      apiKey,
+      userId,
+      description,
+      usage: {
+        header: 'X-API-Key: ' + apiKey,
+        query: '?api_key=' + apiKey
+      },
+      warning: 'This endpoint is only available in development mode'
+    })
+  } catch (error) {
+    logger.error('Error creating dev API key:', error)
+    res.status(500).json({
+      error: 'Failed to create development key',
+      message: error.message
+    })
+  }
+})
 
 module.exports = router

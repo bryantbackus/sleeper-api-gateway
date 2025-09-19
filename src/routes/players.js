@@ -4,6 +4,7 @@ const cacheService = require('../services/cacheService')
 const playerSearchService = require('../services/playerSearchService')
 const { requireAPIKey, optionalAPIKey } = require('../middleware/simpleAuth')
 const { generalLimiter } = require('../middleware/rateLimiter')
+const { authAwareRateLimiters } = require('../middleware/authAwareRateLimit')
 const logger = require('../config/logger')
 
 const router = express.Router()
@@ -23,7 +24,7 @@ const handleValidationErrors = (req, res, next) => {
 // Get all players (cached)
 router.get('/nfl',
   optionalAPIKey, // Players data doesn't require auth
-  generalLimiter,
+  authAwareRateLimiters.playerEndpoints,
   async (req, res) => {
     try {
       const players = await cacheService.getAllPlayers()
@@ -44,7 +45,7 @@ router.get('/nfl',
 // Get trending players (cached)
 router.get('/nfl/trending/:type',
   optionalAPIKey,
-  generalLimiter,
+  authAwareRateLimiters.playerEndpoints,
   param('type').isIn(['add', 'drop']).withMessage('Type must be add or drop'),
   query('lookback_hours').optional().isInt({ min: 1, max: 168 }).withMessage('Lookback hours must be between 1 and 168'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
@@ -74,7 +75,7 @@ router.get('/nfl/trending/:type',
 // Search players by ID
 router.get('/search/id/:playerId',
   optionalAPIKey,
-  generalLimiter,
+  authAwareRateLimiters.searchEndpoints,
   param('playerId').notEmpty().withMessage('Player ID is required'),
   handleValidationErrors,
   async (req, res) => {
@@ -105,7 +106,7 @@ router.get('/search/id/:playerId',
 // Search players by name
 router.get('/search/name',
   optionalAPIKey,
-  generalLimiter,
+  authAwareRateLimiters.searchEndpoints,
   query('q').notEmpty().withMessage('Search query is required'),
   query('limit').optional().isInt({ min: 1, max: 50 }).withMessage('Limit must be between 1 and 50'),
   handleValidationErrors,
@@ -135,7 +136,7 @@ router.get('/search/name',
 // Search players by position
 router.get('/search/position/:position',
   optionalAPIKey,
-  generalLimiter,
+  authAwareRateLimiters.searchEndpoints,
   param('position').isIn(['QB', 'RB', 'WR', 'TE', 'K', 'DEF']).withMessage('Invalid position'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
   handleValidationErrors,
@@ -165,7 +166,7 @@ router.get('/search/position/:position',
 // Search players by team
 router.get('/search/team/:team',
   optionalAPIKey,
-  generalLimiter,
+  authAwareRateLimiters.searchEndpoints,
   param('team').isLength({ min: 2, max: 3 }).withMessage('Team must be 2-3 characters'),
   query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('Limit must be between 1 and 100'),
   handleValidationErrors,
@@ -195,7 +196,7 @@ router.get('/search/team/:team',
 // Get active players only
 router.get('/active',
   optionalAPIKey,
-  generalLimiter,
+  authAwareRateLimiters.playerEndpoints,
   query('limit').optional().isInt({ min: 1, max: 200 }).withMessage('Limit must be between 1 and 200'),
   handleValidationErrors,
   async (req, res) => {

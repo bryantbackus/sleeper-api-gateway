@@ -12,6 +12,7 @@ const logger = require('./config/logger')
 const authRoutes = require('./routes/auth')
 const sleeperRoutes = require('./routes/sleeper')
 const playersRoutes = require('./routes/players')
+const profileRoutes = require('./routes/profile')
 const indexRoutes = require('./routes/index')
 
 // Import middleware
@@ -79,6 +80,7 @@ app.post('/cache/clear', clearCache)
 
 // Routes with caching
 app.use('/auth', authRoutes)
+app.use('/profile', profileRoutes)
 app.use('/sleeper', smartCache, sleeperRoutes)
 app.use('/players', smartCache, playersRoutes)
 app.use('/', indexRoutes)

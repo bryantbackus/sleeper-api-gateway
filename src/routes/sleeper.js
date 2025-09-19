@@ -3,6 +3,8 @@ const { body, param, query, validationResult } = require('express-validator')
 const sleeperService = require('../services/sleeperService')
 const { requireAPIKey, optionalAPIKey } = require('../middleware/simpleAuth')
 const { sleeperApiLimiter } = require('../middleware/rateLimiter')
+const { authAwareRateLimiters } = require('../middleware/authAwareRateLimit')
+const { loadUserProfile, getEffectiveSleeperUserId } = require('../middleware/userProfile')
 const logger = require('../config/logger')
 
 const router = express.Router()
@@ -19,9 +21,9 @@ const handleValidationErrors = (req, res, next) => {
   next()
 }
 
-// Helper function to get default user ID
-const getDefaultUserId = () => {
-  return process.env.DEFAULT_USER_ID || 'default-user'
+// Helper function to get effective user ID from profile or defaults
+const getEffectiveUserId = (req) => {
+  return getEffectiveSleeperUserId(req) || 'default-user'
 }
 
 // User endpoints
@@ -72,9 +74,10 @@ router.get('/user/:userId/leagues/:sport/:season',
   }
 )
 
-// Get leagues for default user (convenience endpoint)
+// Get leagues for authenticated user (convenience endpoint)
 router.get('/leagues/:sport/:season',
   requireAPIKey,
+  loadUserProfile,
   sleeperApiLimiter,
   param('sport').isIn(['nfl']).withMessage('Sport must be nfl'),
   param('season').isInt({ min: 2017, max: new Date().getFullYear() + 1 }).withMessage('Invalid season'),
@@ -82,13 +85,29 @@ router.get('/leagues/:sport/:season',
   async (req, res) => {
     try {
       const { sport, season } = req.params
-      const userId = getDefaultUserId()
+      const userId = getEffectiveUserId(req)
+      
+      if (!userId || userId === 'default-user') {
+        return res.status(400).json({
+          error: 'No Sleeper user configured',
+          message: 'Please set your Sleeper user ID in your profile first',
+          hint: 'Use PUT /profile to set your sleeper_user_id',
+          profile_status_endpoint: '/profile/status'
+        })
+      }
+      
       const leagues = await sleeperService.getUserLeagues(userId, sport, season)
       
-      logger.info('Default user leagues retrieved:', { userId, sport, season, count: leagues.length })
+      logger.info('User leagues retrieved:', { 
+        apiUserId: req.user.id,
+        sleeperUserId: userId, 
+        sport, 
+        season, 
+        count: leagues.length 
+      })
       res.json(leagues)
     } catch (error) {
-      logger.error('Error fetching default user leagues:', error)
+      logger.error('Error fetching user leagues:', error)
       res.status(error.status || 500).json({
         error: 'Failed to fetch leagues',
         message: error.message
@@ -369,7 +388,7 @@ router.get('/draft/:draftId/traded_picks',
 // NFL State endpoint
 router.get('/state/nfl',
   optionalAPIKey, // NFL state doesn't require auth
-  sleeperApiLimiter,
+  authAwareRateLimiters.nflStateEndpoint,
   async (req, res) => {
     try {
       const nflState = await sleeperService.getNFLState()

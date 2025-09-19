@@ -50,25 +50,38 @@ router.get('/', (req, res) => {
     version: '1.0.0',
     description: 'API middleware server for Sleeper fantasy football API with caching and authentication',
     documentation: {
-      auth: '/auth - Authentication endpoints',
-      sleeper: '/sleeper - Proxied Sleeper API endpoints',
-      players: '/players - Player search and cached data endpoints'
+      auth: '/auth - API key management and authentication',
+      profile: '/profile - User profile management for multi-user support',
+      sleeper: '/sleeper - Proxied Sleeper API endpoints with authentication',
+      players: '/players - Player search and cached data endpoints',
+      cache: '/cache - Cache management and statistics'
     },
     endpoints: {
       health: '/health',
       auth: {
-        login: '/auth/login',
-        callback: '/auth/callback',
         validate: '/auth/validate',
-        logout: '/auth/logout'
+        createKey: '/auth/create-key',
+        listKeys: '/auth/keys',
+        revokeKey: '/auth/keys/:keyPrefix',
+        devKey: '/auth/dev-key',
+        cleanup: '/auth/cleanup'
+      },
+      profile: {
+        get: '/profile',
+        update: '/profile',
+        delete: '/profile',
+        verify: '/profile/verify-sleeper',
+        status: '/profile/status'
       },
       sleeper: {
         user: '/sleeper/user/:identifier',
         leagues: '/sleeper/leagues/:sport/:season',
         league: '/sleeper/league/:leagueId',
         rosters: '/sleeper/league/:leagueId/rosters',
+        users: '/sleeper/league/:leagueId/users',
         matchups: '/sleeper/league/:leagueId/matchups/:week',
-        drafts: '/sleeper/draft/:draftId',
+        transactions: '/sleeper/league/:leagueId/transactions/:week',
+        tradedPicks: '/sleeper/league/:leagueId/traded_picks',
         nflState: '/sleeper/state/nfl'
       },
       players: {
@@ -81,6 +94,10 @@ router.get('/', (req, res) => {
         active: '/players/active',
         cacheStatus: '/players/cache/status',
         cacheRefresh: '/players/cache/refresh'
+      },
+      cache: {
+        stats: '/cache/stats',
+        clear: '/cache/clear'
       }
     },
     support: {

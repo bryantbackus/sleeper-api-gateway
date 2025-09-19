@@ -72,6 +72,15 @@ class Database {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         last_used DATETIME,
         active INTEGER DEFAULT 1
+      )`,
+      `CREATE TABLE IF NOT EXISTS user_profiles (
+        user_id TEXT PRIMARY KEY,
+        sleeper_user_id TEXT,
+        sleeper_username TEXT,
+        display_name TEXT,
+        preferences TEXT DEFAULT '{}',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )`
     ]
 
@@ -83,7 +92,9 @@ class Database {
       'CREATE INDEX IF NOT EXISTS idx_cache_metadata_updated_at ON cache_metadata(updated_at)',
       'CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id)',
       'CREATE INDEX IF NOT EXISTS idx_api_keys_active ON api_keys(active)',
-      'CREATE INDEX IF NOT EXISTS idx_api_keys_last_used ON api_keys(last_used)'
+      'CREATE INDEX IF NOT EXISTS idx_api_keys_last_used ON api_keys(last_used)',
+      'CREATE INDEX IF NOT EXISTS idx_user_profiles_sleeper_user_id ON user_profiles(sleeper_user_id)',
+      'CREATE INDEX IF NOT EXISTS idx_user_profiles_updated_at ON user_profiles(updated_at)'
     ]
 
     // Execute table creation with proper error handling
@@ -191,6 +202,44 @@ class Database {
   async cleanupInactiveKeys(daysOld = 90) {
     const sql = 'DELETE FROM api_keys WHERE active = 0 AND created_at < datetime("now", "-" || ? || " days")'
     return this.run(sql, [daysOld])
+  }
+
+  // User Profile Management
+  async createUserProfile(userId, profileData) {
+    const { sleeper_user_id, sleeper_username, display_name, preferences = {} } = profileData
+    const preferencesJson = JSON.stringify(preferences)
+    
+    const sql = `
+      INSERT OR REPLACE INTO user_profiles 
+      (user_id, sleeper_user_id, sleeper_username, display_name, preferences, updated_at)
+      VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+    `
+    return this.run(sql, [userId, sleeper_user_id, sleeper_username, display_name, preferencesJson])
+  }
+
+  async getUserProfile(userId) {
+    const sql = 'SELECT * FROM user_profiles WHERE user_id = ?'
+    const profile = await this.get(sql, [userId])
+    
+    if (profile && profile.preferences) {
+      try {
+        profile.preferences = JSON.parse(profile.preferences)
+      } catch (e) {
+        profile.preferences = {}
+      }
+    }
+    
+    return profile
+  }
+
+  async deleteUserProfile(userId) {
+    const sql = 'DELETE FROM user_profiles WHERE user_id = ?'
+    return this.run(sql, [userId])
+  }
+
+  async getAllUserProfiles() {
+    const sql = 'SELECT user_id, sleeper_user_id, sleeper_username, display_name, created_at, updated_at FROM user_profiles ORDER BY updated_at DESC'
+    return this.all(sql)
   }
 }
 
