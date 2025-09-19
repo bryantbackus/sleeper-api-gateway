@@ -36,18 +36,20 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx/ssl:/etc/letsencrypt:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
       - ./nginx/logs:/var/log/nginx
       - certbot_data:/var/www/certbot
     networks:
       - sleeper_network
     depends_on:
-      - sleeper-api
+      sleeper-api:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80"] 
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 10s
 
   # Optional: Certbot for SSL certificates (production)
   certbot:
@@ -59,7 +61,8 @@ services:
       - certbot_data:/var/www/certbot
     command: certonly --webroot --webroot-path=/var/www/certbot --email ${SSL_EMAIL} --agree-tos --no-eff-email -d ${DOMAIN:-localhost}
     depends_on:
-      - nginx
+      nginx:
+        condition: service_healthy
     profiles:
       - production
 

@@ -22,6 +22,7 @@
     "docker:logs": "docker-compose logs -f",
     "docker:restart": "docker-compose restart",
     "docker:clean": "docker-compose down -v --remove-orphans && docker system prune -f",
+    "ssl:setup": "bash scripts/ssl-setup.sh",
     "ssl:generate": "node scripts/ssl-manager.js generate",
     "ssl:renew": "node scripts/ssl-manager.js renew",
     "ssl:status": "node scripts/ssl-manager.js status",

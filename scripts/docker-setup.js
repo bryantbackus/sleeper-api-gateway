@@ -134,20 +134,16 @@ async function buildDockerImages() {
 async function startDockerServices(config) {
   console.log('\n🚀 Starting Docker services...')
   try {
+    // Always start with basic services first (nginx will auto-detect SSL)
     let composeCommand = 'docker-compose up -d'
-    
-    // Add production profile for SSL if enabled
-    if (config.enableSsl) {
-      composeCommand = 'docker-compose --profile production up -d'
-      console.log('🔒 SSL enabled - starting with production profile')
-    }
+    console.log('🔄 Starting services with smart SSL detection')
     
     execSync(composeCommand, { stdio: 'inherit' })
     console.log('✅ Docker services started successfully')
     
     // Wait for services to be ready
     console.log('⏳ Waiting for services to be ready...')
-    await new Promise(resolve => setTimeout(resolve, 10000))
+    await new Promise(resolve => setTimeout(resolve, 15000))
     
     return true
   } catch (error) {
@@ -318,6 +314,27 @@ async function main() {
   
   // Create initial API key
   await createInitialAPIKey(config)
+  
+  // SSL setup integration
+  if (config.enableSsl && config.domain !== 'localhost') {
+    console.log('\n🔒 SSL Certificate Setup:')
+    const runSslSetup = await prompt('Run SSL certificate setup now? (y/n)', 'y')
+    if (runSslSetup.toLowerCase() === 'y' || runSslSetup.toLowerCase() === 'yes') {
+      try {
+        console.log('🔄 Running SSL setup script...')
+        execSync('chmod +x scripts/ssl-setup.sh', { stdio: 'inherit' })
+        execSync('./scripts/ssl-setup.sh', { stdio: 'inherit' })
+      } catch (error) {
+        console.log('⚠️ SSL setup encountered an issue. You can run it manually later:')
+        console.log('   chmod +x scripts/ssl-setup.sh')
+        console.log('   ./scripts/ssl-setup.sh')
+      }
+    } else {
+      console.log('📝 SSL setup skipped. Run later with:')
+      console.log('   chmod +x scripts/ssl-setup.sh')
+      console.log('   ./scripts/ssl-setup.sh')
+    }
+  }
   
   // Display summary
   await displaySummary(config)
