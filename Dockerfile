@@ -1,6 +1,10 @@
 # Use official Node.js runtime as base image
 FROM node:18-alpine
 
+# Install build dependencies for native modules (sqlite3)
+RUN apk add --no-cache python3 make g++ && \
+    ln -sf python3 /usr/bin/python
+
 # Set working directory
 WORKDIR /app
 
@@ -11,8 +15,11 @@ RUN addgroup -g 1001 -S nodejs && \
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --omit=dev && npm cache clean --force
+# Install dependencies (production only)
+RUN npm ci --production && npm cache clean --force
+
+# Remove build dependencies to reduce image size
+RUN apk del python3 make g++
 
 # Copy application code
 COPY src/ ./src/
