@@ -50,9 +50,8 @@ PORT=3000
 # Security Keys (Auto-generated)
 MASTER_KEY=${config.masterKey}
 
-# Your Sleeper Account (Optional - can be set per user)
-DEFAULT_USER_ID=${config.sleeperUserId || ''}
-DEFAULT_USERNAME=${config.sleeperUsername || ''}
+# Sleeper accounts configured per user via /profile endpoints
+# No default configuration needed for multi-user deployment
 
 # Database Configuration
 DATABASE_PATH=/app/data/database.sqlite
@@ -210,9 +209,7 @@ async function displaySummary(config) {
   console.log(`   Environment: ${config.environment}`)
   console.log(`   Domain: ${config.domain || 'localhost'}`)
   console.log(`   Log Level: ${config.logLevel}`)
-  if (config.sleeperUserId) {
-    console.log(`   Default Sleeper User: ${config.sleeperUsername} (${config.sleeperUserId})`)
-  }
+  console.log(`   User Management: Multi-user (configure via /profile endpoints)`)
   
   console.log('\n🔗 Service URLs:')
   
@@ -289,11 +286,8 @@ async function main() {
     config.enableSsl = false
   }
   
-  console.log('\n👤 Sleeper Account (Optional - can configure per user later):')
-  config.sleeperUserId = await prompt('Your Sleeper User ID (leave blank to skip)')
-  if (config.sleeperUserId) {
-    config.sleeperUsername = await prompt('Your Sleeper Username')
-  }
+  // Note: Sleeper accounts are configured per user via /profile endpoints
+  // No default configuration needed for multi-user deployment
   
   // Generate secure keys
   console.log('\n🔐 Generating secure keys...')

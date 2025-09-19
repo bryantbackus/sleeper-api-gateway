@@ -37,8 +37,6 @@ MASTER_KEY=${config.masterKey}
 
 # Sleeper Configuration
 SLEEPER_BASE_URL=https://api.sleeper.app/v1
-DEFAULT_USER_ID=${config.sleeperUserId}
-DEFAULT_USERNAME=${config.sleeperUsername}
 
 # Database & Cache
 DATABASE_PATH=./data/database.sqlite
@@ -94,7 +92,7 @@ function displayInstructions(config, apiKey) {
   console.log('\n📋 Your Configuration:')
   console.log(`   Port: ${config.port}`)
   console.log(`   Environment: ${config.nodeEnv}`)
-  console.log(`   Sleeper User: ${config.sleeperUsername} (${config.sleeperUserId})`)
+  console.log(`   User Management: Multi-user (configure via /profile endpoints)`)
   
   console.log('\n🔑 Your API Key:')
   console.log(`   ${apiKey}`)
@@ -134,7 +132,7 @@ function displayInstructions(config, apiKey) {
   console.log(`   # Create new API key`)
   console.log(`   curl -X POST -H "X-Master-Key: ${config.masterKey}" \\`)
   console.log(`     -H "Content-Type: application/json" \\`)
-  console.log(`     -d '{"userId":"${config.sleeperUserId}","description":"My second key"}' \\`)
+  console.log(`     -d '{"userId":"your-username","description":"My second key"}' \\`)
   console.log(`     http://localhost:${config.port}/auth/create-key`)
   
   console.log('\n📁 Important Files:')
@@ -176,19 +174,9 @@ async function main() {
     config.nodeEnv = await prompt('Environment (development/production)', 'production')
     config.port = await prompt('Server port', '3000')
     
-    console.log('\n🏈 Sleeper Account Information:')
-    console.log('You can find your Sleeper User ID by going to sleeper.app and checking your profile URL.')
-    console.log('Example: https://sleeper.app/profile/123456789 -> User ID is 123456789\n')
-    
-    config.sleeperUserId = await prompt('Your Sleeper User ID')
-    config.sleeperUsername = await prompt('Your Sleeper Username', config.sleeperUserId)
-
-    if (!config.sleeperUserId) {
-      console.log('❌ Sleeper User ID is required for the API to work properly.')
-      console.log('Please get your User ID from sleeper.app and run setup again.')
-      rl.close()
-      return
-    }
+    console.log('\n🏈 Multi-User Setup:')
+    console.log('Sleeper accounts are configured per user after deployment.')
+    console.log('Each user will set their own Sleeper credentials via /profile endpoints.')
 
     console.log('\n🔐 Generating Security Keys...')
     config.masterKey = generateSecureKey()
@@ -203,7 +191,7 @@ async function main() {
     const description = 'Initial setup key'
     
     // Save API key reference
-    await saveAPIKeyReference(apiKey, config.sleeperUserId, description)
+    await saveAPIKeyReference(apiKey, 'admin-user', description)
 
     // Display completion instructions
     displayInstructions(config, apiKey)

@@ -3,8 +3,9 @@ FROM nginx:alpine
 # Install envsubst for environment variable substitution
 RUN apk add --no-cache gettext
 
-# Copy nginx configuration template
-COPY nginx.conf /etc/nginx/nginx.conf.template
+# Copy nginx configuration templates
+COPY nginx-ssl.conf.template /etc/nginx/nginx-ssl.conf.template
+COPY nginx-http.conf.template /etc/nginx/nginx-http.conf.template
 
 # Create directories for SSL certificates and static files
 RUN mkdir -p /etc/nginx/ssl /var/www/certbot
