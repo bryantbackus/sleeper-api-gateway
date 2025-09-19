@@ -14,8 +14,9 @@ This runs the Docker setup script that:
 - ✅ Creates secure environment configuration
 - ✅ Generates encryption keys
 - ✅ Builds Docker images
-- ✅ Starts all services
+- ✅ Starts services with smart SSL detection
 - ✅ Creates initial API key
+- ✅ Offers automated SSL setup (if domain provided)
 - ✅ Provides connection details
 
 ## 📋 Prerequisites
@@ -191,26 +192,36 @@ docker-compose exec sleeper-api env
 
 ### **SSL/HTTPS Setup**
 
-#### **Development (Self-Signed)**
+#### **Automatic SSL (Recommended)**
+The deployment script now includes integrated SSL setup:
+
 ```bash
-# Generate self-signed certificates
-mkdir -p nginx/ssl
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout nginx/ssl/privkey.pem \
-  -out nginx/ssl/fullchain.pem \
-  -subj "/C=US/ST=State/L=City/O=Org/CN=localhost"
+# During deployment, when prompted:
+Domain name: yourdomain.com
+Enable SSL/HTTPS with Let's Encrypt? (y/n): y
+Email for SSL certificate: your-email@domain.com
+Run SSL certificate setup now? (y/n): y
 ```
 
-#### **Production (Let's Encrypt)**
+#### **Manual SSL Setup**
 ```bash
-# Update domain in .env
-echo "DOMAIN=your-domain.com" >> .env
+# Run the automated SSL setup script
+npm run ssl:setup
 
-# Start certbot service
-docker-compose --profile production up certbot
+# Or use individual commands
+npm run ssl:generate   # Generate certificates
+npm run ssl:status     # Check status
+npm run ssl:renew      # Renew certificates
+```
 
-# Restart nginx with SSL
-npm run docker:restart
+#### **Development (Self-Signed)**
+```bash
+# Generate self-signed certificates for localhost
+mkdir -p nginx/ssl/live/localhost
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout nginx/ssl/live/localhost/privkey.pem \
+  -out nginx/ssl/live/localhost/fullchain.pem \
+  -subj "/C=US/ST=State/L=City/O=Org/CN=localhost"
 ```
 
 ### **API Key Management**

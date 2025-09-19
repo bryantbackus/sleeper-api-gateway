@@ -274,8 +274,9 @@ This command:
 - ✅ Creates secure configuration (.env)
 - ✅ Generates encryption keys  
 - ✅ Builds Docker images
-- ✅ Starts all services (API + Nginx)
+- ✅ Starts services with smart SSL detection
 - ✅ Creates initial API key
+- ✅ Offers automated SSL setup (if domain provided)
 - ✅ Shows connection details
 
 ### 🔧 **Manual Docker Commands**
@@ -296,11 +297,12 @@ npm run docker:restart
 npm run docker:clean
 
 # SSL certificate management
-npm run ssl:generate  # Generate SSL certificates
-npm run ssl:status    # Check certificate status
-npm run ssl:renew     # Renew certificates
-npm run ssl:enable    # Enable SSL
-npm run ssl:disable   # Disable SSL
+npm run ssl:setup      # Run full SSL setup
+npm run ssl:generate   # Generate SSL certificates
+npm run ssl:status     # Check certificate status
+npm run ssl:renew      # Renew certificates
+npm run ssl:enable     # Enable SSL
+npm run ssl:disable    # Disable SSL
 ```
 
 ### 🛠️ **Development with Docker**
@@ -425,6 +427,9 @@ Email for SSL certificate: your-email@domain.com
 
 #### **Manual SSL Management**
 ```bash
+# Run full SSL setup (recommended)
+npm run ssl:setup
+
 # Generate SSL certificates
 npm run ssl:generate
 
