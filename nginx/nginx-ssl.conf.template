@@ -89,8 +89,8 @@ http {
         server_name ${DOMAIN};
 
         # SSL configuration
-        ssl_certificate /etc/nginx/ssl/live/${DOMAIN}/fullchain.pem;
-        ssl_certificate_key /etc/nginx/ssl/live/${DOMAIN}/privkey.pem;
+        ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
         
         # Modern SSL configuration
         ssl_protocols TLSv1.2 TLSv1.3;
