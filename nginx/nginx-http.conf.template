@@ -85,6 +85,12 @@ http {
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
 
+        # Let's Encrypt ACME challenge
+        location /.well-known/acme-challenge/ {
+            root /var/www/certbot;
+            try_files $uri $uri/ =404;
+        }
+
         # Health check endpoint (no rate limiting)
         location = /health {
             proxy_pass http://api_backend;
