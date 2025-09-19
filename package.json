@@ -15,6 +15,14 @@
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "setup": "node scripts/manage.js",
+    "setup:docker": "node scripts/docker-setup.js",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:restart": "docker-compose restart",
+    "docker:clean": "docker-compose down -v --remove-orphans && docker system prune -f",
+    "deploy": "npm run setup:docker",
     "quick-start": "npm run setup && npm install && npm start"
   },
   "keywords": [
@@ -36,7 +44,6 @@
     "express-rate-limit": "^7.1.5",
     "express-validator": "^7.0.1",
     "helmet": "^7.1.0",
-    "jsonwebtoken": "^9.0.2",
     "moment-timezone": "^0.5.43",
     "node-cron": "^3.0.3",
     "sqlite3": "^5.1.6",

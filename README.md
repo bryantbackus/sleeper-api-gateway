@@ -261,25 +261,54 @@ LOG_LEVEL=info
 2. Navigate to your profile
 3. Your user ID is in the URL: `sleeper.app/profile/[USER_ID]`
 
-## 🐳 Docker Deployment
+## 🐳 Docker Deployment (Recommended)
 
-### Production
+### 🚀 **One-Command Deploy**
 ```bash
-# Start all services
-docker-compose up -d
+# Automated Docker setup (handles everything)
+npm run deploy
+```
+
+This command:
+- ✅ Checks Docker installation
+- ✅ Creates secure configuration (.env)
+- ✅ Generates encryption keys  
+- ✅ Builds Docker images
+- ✅ Starts all services (API + Nginx)
+- ✅ Creates initial API key
+- ✅ Shows connection details
+
+### 🔧 **Manual Docker Commands**
+```bash
+# Build and start services
+npm run docker:up
 
 # View logs
-docker-compose logs -f
+npm run docker:logs
 
-# Stop services
-docker-compose down
+# Stop services  
+npm run docker:down
+
+# Restart services
+npm run docker:restart
+
+# Clean up (removes volumes)
+npm run docker:clean
 ```
 
-### Development
+### 🛠️ **Development with Docker**
 ```bash
 # Start with hot reload
-docker-compose -f docker-compose.dev.yml up
+docker-compose -f docker-compose.dev.yml up -d
 ```
+
+### 📖 **Detailed Docker Guide**
+See [DOCKER_DEPLOYMENT.md](./DOCKER_DEPLOYMENT.md) for comprehensive Docker deployment documentation including:
+- SSL/HTTPS setup
+- Production configuration
+- Scaling and load balancing
+- Monitoring and troubleshooting
+- Backup and recovery
 
 ## 🔒 Security Features
 

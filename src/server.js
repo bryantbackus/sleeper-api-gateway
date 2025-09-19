@@ -58,8 +58,6 @@ app.use(compression())
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
-// Note: Passport and session middleware removed - using simple API key authentication
-
 // Apply rate limiting
 app.use(generalLimiter)
 

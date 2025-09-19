@@ -34,7 +34,6 @@ PORT=${config.port}
 
 # Security Keys (auto-generated)
 MASTER_KEY=${config.masterKey}
-JWT_SECRET=${config.jwtSecret}
 
 # Sleeper Configuration
 SLEEPER_BASE_URL=https://api.sleeper.app/v1
@@ -193,7 +192,6 @@ async function main() {
 
     console.log('\n🔐 Generating Security Keys...')
     config.masterKey = generateSecureKey()
-    config.jwtSecret = generateSecureKey()
     console.log('✅ Security keys generated')
 
     // Create .env file
