@@ -335,14 +335,18 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
   } catch (error) {
     log('error', `MCP tool failed: ${name}`, { error: error.message })
     
-    // Return standardized JSON-RPC 2.0 error format with detailed error information
+    // Return standardized JSON-RPC 2.0 error format with API error details
+    const apiError = error.response?.data
+    const statusCode = error.response?.status
+    
     throw {
       code: -32603,
-      message: error.message,
+      message: statusCode ? `Request failed with status code ${statusCode}` : error.message,
       data: {
         tool: name,
         timestamp: new Date().toISOString(),
-        details: error.response?.data || error.stack
+        status: statusCode,
+        message: apiError?.message || apiError || 'API request failed'
       }
     }
   }
@@ -547,11 +551,12 @@ app.post('/mcp', async (req, res) => {
             id,
             error: {
               code: -32603,
-              message: error.message,
+              message: error.response?.status ? `Request failed with status code ${error.response.status}` : error.message,
               data: {
                 tool: name,
                 timestamp: new Date().toISOString(),
-                details: error.response?.data || error.stack
+                status: error.response?.status,
+                message: error.response?.data?.message || error.response?.data || 'API request failed'
               }
             }
           })
