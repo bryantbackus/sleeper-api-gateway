@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 /**
  * MCP Server for Sleeper API
  * Provides standardized MCP interface to Sleeper API middleware
@@ -394,13 +396,13 @@ app.get('/health', async (req, res) => {
   res.status(health.status === 'ok' ? 200 : 503).json(health)
 })
 
-// MCP info endpoint
+// Enhanced info endpoint with fixed protocol version
 app.get('/mcp', (req, res) => {
   res.json({
     name: 'sleeper-api-mcp',
     version: '1.0.0',
-    description: 'MCP server for Sleeper API access',
-    protocolVersion: '2025-03-26',
+    description: 'MCP server for Sleeper API access - No authentication required to connect',
+    protocolVersion: '2024-11-05',
     capabilities: {
       tools: {
         listChanged: true
@@ -412,22 +414,158 @@ app.get('/mcp', (req, res) => {
       info: '/mcp',
       mcp: '/mcp'
     },
-    // authentication: {
-    //   methods: ['header', 'parameter'],
-    //   header: 'X-API-Key',
-    //   parameter: 'apiKey',
-    //   required: true,
-    //   description: 'API key is required. Provide via X-API-Key header or apiKey parameter'
-    // },
     features: {
       caching: true,
       validation: true,
       monitoring: true,
-      notifications: true
+      notifications: true,
+      openAccess: true
     },
     transport: 'streamableHTTP',
-    protocol: 'mcp/2024-11-05'
+    protocol: 'mcp/2024-11-05',
+    note: 'API keys are only required when tools access the Sleeper API backend, not for MCP connection'
   })
+})
+
+// Map to store transports by session ID
+const transports = new Map()
+
+// MCP GET endpoint for connection establishment (required by StreamableHTTP)
+app.get('/mcp', async (req, res) => {
+  try {
+    log('debug', 'MCP GET request received', { 
+      headers: Object.keys(req.headers),
+      query: req.query
+    })
+    
+    // Return server info for GET requests
+    res.json({
+      name: 'sleeper-api-mcp',
+      version: '1.0.0',
+      protocolVersion: '2024-11-05',
+      capabilities: {
+        tools: { listChanged: true },
+        resources: {}
+      },
+      transport: 'streamableHTTP',
+      description: 'Open access MCP server - no authentication required to connect',
+      note: 'API keys only needed for individual tool calls to access Sleeper API'
+    })
+    
+  } catch (error) {
+    log('error', 'MCP GET request failed', { error: error.message })
+    res.status(500).json({
+      jsonrpc: '2.0',
+      error: {
+        code: -32603,
+        message: 'Internal error'
+      }
+    })
+  }
+})
+
+// MCP POST endpoint for message handling
+app.post('/mcp', async (req, res) => {
+  try {
+    log('debug', 'MCP POST request received', { 
+      sessionId: req.headers['mcp-session-id'],
+      method: req.body?.method,
+      id: req.body?.id
+    })
+    
+    const sessionId = req.headers['mcp-session-id']
+    let transport
+    
+    if (sessionId && transports.has(sessionId)) {
+      // Reuse existing transport
+      transport = transports.get(sessionId)
+      log('debug', 'Reusing existing transport', { sessionId })
+    } else {
+      // Create new transport for new sessions or initialization
+      log('debug', 'Creating new transport', { 
+        isInitialize: req.body?.method === 'initialize',
+        hasSessionId: !!sessionId
+      })
+      
+      transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        onsessioninitialized: (newSessionId) => {
+          log('info', `MCP session initialized: ${newSessionId}`)
+          transports.set(newSessionId, transport)
+        }
+      })
+      
+      // Connect server to transport
+      await mcpServer.connect(transport)
+      
+      // Set up cleanup on close
+      const originalClose = transport.close.bind(transport)
+      transport.close = async () => {
+        const sid = transport.sessionId
+        if (sid && transports.has(sid)) {
+          log('info', `MCP session closing: ${sid}`)
+          transports.delete(sid)
+        }
+        return originalClose()
+      }
+    }
+    
+    // Handle the request with the transport
+    await transport.handleRequest(req, res)
+    
+  } catch (error) {
+    log('error', 'MCP POST request failed', { 
+      error: error.message,
+      stack: CONFIG.NODE_ENV !== 'production' ? error.stack : undefined
+    })
+    
+    if (!res.headersSent) {
+      res.status(500).json({
+        jsonrpc: '2.0',
+        id: req.body?.id || null,
+        error: {
+          code: -32603,
+          message: 'Internal error',
+          data: CONFIG.NODE_ENV === 'production' ? undefined : error.message
+        }
+      })
+    }
+  }
+})
+
+// Handle DELETE requests for session termination
+app.delete('/mcp', async (req, res) => {
+  const sessionId = req.headers['mcp-session-id']
+  
+  if (!sessionId || !transports.has(sessionId)) {
+    return res.status(400).json({
+      jsonrpc: '2.0',
+      error: {
+        code: -32000,
+        message: 'Bad Request: No valid session ID provided'
+      }
+    })
+  }
+  
+  log('info', `MCP session termination requested: ${sessionId}`)
+  
+  try {
+    const transport = transports.get(sessionId)
+    if (transport && typeof transport.close === 'function') {
+      await transport.close()
+    }
+    transports.delete(sessionId)
+    res.status(200).json({ message: 'Session terminated successfully' })
+  } catch (error) {
+    log('error', 'Session termination failed', { error: error.message })
+    res.status(500).json({
+      jsonrpc: '2.0',
+      error: {
+        code: -32603,
+        message: 'Failed to terminate session'
+      }
+    })
+  }
 })
 
 // Error handling middleware
@@ -438,7 +576,6 @@ app.use((error, req, res, next) => {
     method: req.method
   })
   
-  // Standardized JSON-RPC 2.0 error format
   res.status(500).json({
     jsonrpc: '2.0',
     id: null,
@@ -476,126 +613,18 @@ validateConfig()
 
 // Start HTTP server
 const httpServer = app.listen(CONFIG.HTTP_PORT, () => {
-  log('info', `HTTP server started on port ${CONFIG.HTTP_PORT}`, {
+  log('info', `MCP HTTP server started on port ${CONFIG.HTTP_PORT}`, {
     endpoints: {
       health: `http://localhost:${CONFIG.HTTP_PORT}/health`,
-      info: `http://localhost:${CONFIG.HTTP_PORT}/mcp`
-    }
+      mcp: `http://localhost:${CONFIG.HTTP_PORT}/mcp`
+    },
+    protocol: 'MCP over StreamableHTTP',
+    protocolVersion: '2024-11-05',
+    tools: MCP_TOOLS.length,
+    transport: 'StreamableHTTP',
+    cacheEnabled: true,
+    nodeEnv: CONFIG.NODE_ENV
   })
-})
-
-// Map to store transports by session ID
-const transports = new Map()
-
-// MCP endpoint handler for StreamableHTTP transport
-app.post('/mcp', async (req, res) => {
-  try {
-    log('debug', 'Received MCP request', { 
-      sessionId: req.headers['mcp-session-id'],
-      method: req.body?.method 
-    })
-    
-    // Check for existing session ID
-    const sessionId = req.headers['mcp-session-id']
-    let transport
-    
-    if (sessionId && transports.has(sessionId)) {
-      // Reuse existing transport
-      transport = transports.get(sessionId)
-    } else if (!sessionId || req.body?.method === 'initialize') {
-      // New initialization request
-      transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => randomUUID(),
-        onsessioninitialized: (sessionId) => {
-          log('info', `MCP session initialized: ${sessionId}`)
-          transports.set(sessionId, transport)
-        }
-      })
-      
-      // Connect server to transport
-      await mcpServer.connect(transport)
-      
-      // Clean up on close
-      mcpServer.onclose = async () => {
-        const sid = transport.sessionId
-        if (sid && transports.has(sid)) {
-          log('info', `MCP session closed: ${sid}`)
-          transports.delete(sid)
-        }
-      }
-    } else {
-      return res.status(400).json({
-        jsonrpc: '2.0',
-        id: req.body?.id || null,
-        error: {
-          code: -32000,
-          message: 'Bad Request: No valid session ID provided'
-        }
-      })
-    }
-    
-    // Handle the request with the transport
-    await transport.handleRequest(req, res)
-    
-  } catch (error) {
-    log('error', 'MCP request failed', { error: error.message })
-    
-    res.status(500).json({
-      jsonrpc: '2.0',
-      id: req.body?.id || null,
-      error: {
-        code: -32603,
-        message: 'Internal error',
-        data: CONFIG.NODE_ENV === 'production' ? undefined : error.message
-      }
-    })
-  }
-})
-
-// Handle DELETE requests for session termination
-app.delete('/mcp', async (req, res) => {
-  const sessionId = req.headers['mcp-session-id']
-  
-  if (!sessionId || !transports.has(sessionId)) {
-    return res.status(400).json({
-      jsonrpc: '2.0',
-      error: {
-        code: -32000,
-        message: 'Bad Request: No valid session ID provided'
-      }
-    })
-  }
-  
-  log('info', `MCP session termination requested: ${sessionId}`)
-  
-  try {
-    const transport = transports.get(sessionId)
-    await transport.close()
-    transports.delete(sessionId)
-    res.status(200).json({ message: 'Session terminated' })
-  } catch (error) {
-    log('error', 'Session termination failed', { error: error.message })
-    res.status(500).json({
-      jsonrpc: '2.0',
-      error: {
-        code: -32603,
-        message: 'Failed to terminate session'
-      }
-    })
-  }
-})
-
-log('info', 'MCP server configured with StreamableHTTP transport', {
-  endpoint: '/mcp',
-  protocolVersion: '2024-11-05',
-  tools: MCP_TOOLS.length,
-  capabilities: {
-    tools: { listChanged: true },
-    resources: {}
-  },
-  transport: 'StreamableHTTP',
-  cacheEnabled: true,
-  nodeEnv: CONFIG.NODE_ENV
 })
 
 // Function to send tool list changed notifications
@@ -613,6 +642,17 @@ function notifyToolsChanged() {
 // Graceful shutdown
 function gracefulShutdown(signal) {
   log('info', `${signal} received, shutting down gracefully`)
+  
+  // Close all active transports
+  for (const [sessionId, transport] of transports) {
+    try {
+      transport.close()
+      log('info', `Closed transport for session: ${sessionId}`)
+    } catch (error) {
+      log('error', `Failed to close transport for session ${sessionId}`, { error: error.message })
+    }
+  }
+  transports.clear()
   
   // Close cache
   cache.close()
