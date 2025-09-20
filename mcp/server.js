@@ -427,8 +427,6 @@ app.get('/mcp/info', (req, res) => {
   })
 })
 
-// Map to store transports by session ID
-const transports = new Map()
 
 // MCP GET endpoint for connection establishment (required by StreamableHTTP)
 app.get('/mcp', async (req, res) => {
@@ -464,105 +462,152 @@ app.get('/mcp', async (req, res) => {
   }
 })
 
-// MCP POST endpoint for message handling
 app.post('/mcp', async (req, res) => {
   try {
-    log('debug', 'MCP POST request received', { 
-      sessionId: req.headers['mcp-session-id'],
-      method: req.body?.method,
-      id: req.body?.id
-    })
+    const { jsonrpc, method, params, id } = req.body
     
-    const sessionId = req.headers['mcp-session-id']
-    let transport
+    log('debug', 'MCP request received', { method, id })
     
-    if (sessionId && transports.has(sessionId)) {
-      // Reuse existing transport
-      transport = transports.get(sessionId)
-      log('debug', 'Reusing existing transport', { sessionId })
-    } else {
-      // Create new transport for new sessions or initialization
-      log('debug', 'Creating new transport', { 
-        isInitialize: req.body?.method === 'initialize',
-        hasSessionId: !!sessionId
-      })
-      
-      transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => randomUUID(),
-        onsessioninitialized: (newSessionId) => {
-          log('info', `MCP session initialized: ${newSessionId}`)
-          transports.set(newSessionId, transport)
+    // Validate JSON-RPC format
+    if (jsonrpc !== '2.0') {
+      return res.status(400).json({
+        jsonrpc: '2.0',
+        id,
+        error: {
+          code: -32600,
+          message: 'Invalid Request: jsonrpc must be "2.0"'
         }
       })
-      
-      // Connect server to transport
-      await mcpServer.connect(transport)
-      
-      // Set up cleanup on close
-      const originalClose = transport.close.bind(transport)
-      transport.close = async () => {
-        const sid = transport.sessionId
-        if (sid && transports.has(sid)) {
-          log('info', `MCP session closing: ${sid}`)
-          transports.delete(sid)
-        }
-        return originalClose()
-      }
     }
     
-    // Handle the request with the transport
-    await transport.handleRequest(req, res)
+    // Handle different MCP methods
+    switch (method) {
+      case 'initialize':
+        log('info', 'MCP initialize request', { clientInfo: params?.clientInfo })
+        res.json({
+          jsonrpc: '2.0',
+          id,
+          result: {
+            protocolVersion: '2024-11-05',
+            capabilities: {
+              tools: { listChanged: true },
+              resources: {}
+            },
+            serverInfo: {
+              name: 'sleeper-api-mcp',
+              version: '1.0.0'
+            }
+          }
+        })
+        break
+        
+      case 'tools/list':
+        log('info', 'MCP tools/list request')
+        res.json({
+          jsonrpc: '2.0',
+          id,
+          result: {
+            tools: MCP_TOOLS
+          }
+        })
+        break
+        
+      case 'tools/call':
+        const { name, arguments: args } = params
+        
+        // Extract API key from request headers or arguments
+        const apiKey = req.headers['x-api-key'] || 
+                       req.headers['X-API-Key'] || 
+                       args?.apiKey || 
+                       null
+        
+        log('info', `MCP tool called: ${name}`, { 
+          arguments: Object.keys(args || {}),
+          hasApiKey: !!apiKey
+        })
+
+        try {
+          const result = await executeTool(name, args, apiKey)
+          
+          res.json({
+            jsonrpc: '2.0',
+            id,
+            result: {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  data: result.data,
+                  metadata: {
+                    timestamp: new Date().toISOString(),
+                    success: true,
+                    tool: name,
+                    cached: result.cached
+                  }
+                }, null, 2)
+              }],
+              isError: false
+            }
+          })
+
+          log('info', `MCP tool completed: ${name}`, { 
+            success: true,
+            cached: result.cached 
+          })
+          
+        } catch (error) {
+          log('error', `MCP tool failed: ${name}`, { error: error.message })
+          
+          res.json({
+            jsonrpc: '2.0',
+            id,
+            error: {
+              code: -32603,
+              message: CONFIG.NODE_ENV === 'production' ? 'Tool execution failed' : error.message,
+              data: {
+                tool: name,
+                timestamp: new Date().toISOString()
+              }
+            }
+          })
+        }
+        break
+        
+      case 'resources/list':
+        log('info', 'MCP resources/list request')
+        res.json({
+          jsonrpc: '2.0',
+          id,
+          result: {
+            resources: []
+          }
+        })
+        break
+        
+      default:
+        log('warn', `Unknown MCP method: ${method}`)
+        res.json({
+          jsonrpc: '2.0',
+          id,
+          error: {
+            code: -32601,
+            message: `Method not found: ${method}`
+          }
+        })
+    }
     
   } catch (error) {
-    log('error', 'MCP POST request failed', { 
+    log('error', 'MCP request failed', { 
       error: error.message,
       stack: CONFIG.NODE_ENV !== 'production' ? error.stack : undefined
     })
     
-    if (!res.headersSent) {
-      res.status(500).json({
-        jsonrpc: '2.0',
-        id: req.body?.id || null,
-        error: {
-          code: -32603,
-          message: 'Internal error',
-          data: CONFIG.NODE_ENV === 'production' ? undefined : error.message
-        }
-      })
-    }
-  }
-})
-
-// Handle DELETE requests for session termination
-app.delete('/mcp', async (req, res) => {
-  const sessionId = req.headers['mcp-session-id']
-  
-  if (!sessionId || !transports.has(sessionId)) {
-    return res.status(400).json({
-      jsonrpc: '2.0',
-      error: {
-        code: -32000,
-        message: 'Bad Request: No valid session ID provided'
-      }
-    })
-  }
-  
-  log('info', `MCP session termination requested: ${sessionId}`)
-  
-  try {
-    const transport = transports.get(sessionId)
-    if (transport && typeof transport.close === 'function') {
-      await transport.close()
-    }
-    transports.delete(sessionId)
-    res.status(200).json({ message: 'Session terminated successfully' })
-  } catch (error) {
-    log('error', 'Session termination failed', { error: error.message })
     res.status(500).json({
       jsonrpc: '2.0',
+      id: req.body?.id || null,
       error: {
         code: -32603,
-        message: 'Failed to terminate session'
+        message: 'Internal error',
+        data: CONFIG.NODE_ENV === 'production' ? undefined : error.message
       }
     })
   }
