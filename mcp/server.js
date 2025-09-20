@@ -397,7 +397,7 @@ app.get('/health', async (req, res) => {
 })
 
 // Enhanced info endpoint with fixed protocol version
-app.get('/mcp', (req, res) => {
+app.get('/mcp/info', (req, res) => {
   res.json({
     name: 'sleeper-api-mcp',
     version: '1.0.0',
