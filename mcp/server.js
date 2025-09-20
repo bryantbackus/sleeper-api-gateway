@@ -1,17 +1,17 @@
-#!/usr/bin/env node
-
 /**
  * MCP Server for Sleeper API
  * Provides standardized MCP interface to Sleeper API middleware
+ * Uses official StreamableHTTP transport for proper MCP compliance
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 import { ListToolsRequestSchema, CallToolRequestSchema, ListResourcesRequestSchema, ReadResourceRequestSchema } from '@modelcontextprotocol/sdk/types.js'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import express from 'express'
 import cors from 'cors'
 import axios from 'axios'
 import NodeCache from 'node-cache'
+import { randomUUID } from 'crypto'
 import { MCP_TOOLS, createToolHandlers } from './tools.js'
 
 const app = express()
@@ -150,41 +150,6 @@ function validateArgs(toolName, args) {
   }
 }
 
-// Standardized response formatters
-function formatToolResponse(data, metadata = {}) {
-  return {
-    content: [{
-      type: 'text',
-      text: JSON.stringify({
-        data,
-        metadata: {
-          timestamp: new Date().toISOString(),
-          success: true,
-          ...metadata
-        }
-      }, null, 2)
-    }],
-    isError: false
-  }
-}
-
-function formatError(error, toolName, metadata = {}) {
-  const errorResponse = {
-    error: CONFIG.NODE_ENV === 'production' ? 'Operation failed' : error.message,
-    tool: toolName,
-    timestamp: new Date().toISOString(),
-    ...metadata
-  }
-  
-  return {
-    content: [{
-      type: 'text',
-      text: JSON.stringify(errorResponse, null, 2)
-    }],
-    isError: true
-  }
-}
-
 // Enhanced API call function
 async function callSleeperAPI(endpoint, method = 'GET', data = null, apiKey = null, useCache = false) {
   try {
@@ -274,7 +239,8 @@ async function callSleeperAPI(endpoint, method = 'GET', data = null, apiKey = nu
 
 // Create tool handlers with the callSleeperAPI function
 const toolHandlers = createToolHandlers(callSleeperAPI)
-// Initialize MCP server
+
+// Initialize MCP server with proper capabilities
 const mcpServer = new Server(
   {
     name: 'sleeper-api-mcp',
@@ -282,12 +248,13 @@ const mcpServer = new Server(
   },
   {
     capabilities: {
-      tools: {},
-      resources: {},
+      tools: {
+        listChanged: true  // Support for tools/list_changed notifications
+      },
+      resources: {}
     },
   }
 )
-
 
 // Unified tool execution function
 async function executeTool(toolName, args, apiKey) {
@@ -313,9 +280,7 @@ async function executeTool(toolName, args, apiKey) {
   return result
 }
 
-// MCP Request Handlers
-
-// List available tools
+// Set up MCP request handlers
 mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
   log('info', 'Listing MCP tools', { count: MCP_TOOLS.length })
   return {
@@ -323,19 +288,16 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
   }
 })
 
-// List available resources
 mcpServer.setRequestHandler(ListResourcesRequestSchema, async () => {
   return {
     resources: []
   }
 })
 
-// Read a resource
 mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   throw new Error('No resources available')
 })
 
-// Call a tool
 mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params
   
@@ -353,11 +315,21 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     const result = await executeTool(name, args, apiKey)
     
-    const response = formatToolResponse(result.data, {
-      tool: name,
-      cached: result.cached,
-      executionTime: Date.now()
-    })
+    const response = {
+      content: [{
+        type: 'text',
+        text: JSON.stringify({
+          data: result.data,
+          metadata: {
+            timestamp: new Date().toISOString(),
+            success: true,
+            tool: name,
+            cached: result.cached
+          }
+        }, null, 2)
+      }],
+      isError: false
+    }
 
     log('info', `MCP tool completed: ${name}`, { 
       success: true,
@@ -368,7 +340,16 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   } catch (error) {
     log('error', `MCP tool failed: ${name}`, { error: error.message })
-    return formatError(error, name)
+    
+    // Return standardized JSON-RPC 2.0 error format
+    throw {
+      code: -32603,
+      message: CONFIG.NODE_ENV === 'production' ? 'Tool execution failed' : error.message,
+      data: {
+        tool: name,
+        timestamp: new Date().toISOString()
+      }
+    }
   }
 })
 
@@ -419,27 +400,33 @@ app.get('/mcp', (req, res) => {
     name: 'sleeper-api-mcp',
     version: '1.0.0',
     description: 'MCP server for Sleeper API access',
+    protocolVersion: '2025-03-26',
     capabilities: {
-      tools: {},
+      tools: {
+        listChanged: true
+      },
       resources: {}
     },
     endpoints: {
       health: '/health',
-      mcp: '/mcp',
-      sse: '/sse'
+      info: '/mcp',
+      mcp: '/mcp'
     },
-    authentication: {
-      methods: ['header', 'parameter'],
-      header: 'X-API-Key',
-      parameter: 'apiKey',
-      required: true,
-      description: 'API key is required. Provide via X-API-Key header or apiKey parameter'
-    },
+    // authentication: {
+    //   methods: ['header', 'parameter'],
+    //   header: 'X-API-Key',
+    //   parameter: 'apiKey',
+    //   required: true,
+    //   description: 'API key is required. Provide via X-API-Key header or apiKey parameter'
+    // },
     features: {
       caching: true,
       validation: true,
-      monitoring: true
-    }
+      monitoring: true,
+      notifications: true
+    },
+    transport: 'streamableHTTP',
+    protocol: 'mcp/2024-11-05'
   })
 })
 
@@ -451,46 +438,177 @@ app.use((error, req, res, next) => {
     method: req.method
   })
   
+  // Standardized JSON-RPC 2.0 error format
   res.status(500).json({
-    error: 'Internal server error',
-    message: CONFIG.NODE_ENV === 'production' ? 'An error occurred' : error.message,
-    timestamp: new Date().toISOString()
+    jsonrpc: '2.0',
+    id: null,
+    error: {
+      code: -32603,
+      message: 'Internal server error',
+      data: {
+        timestamp: new Date().toISOString(),
+        path: req.path,
+        method: req.method
+      }
+    }
   })
 })
 
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
-    error: 'Not found',
-    path: req.path,
-    method: req.method,
-    timestamp: new Date().toISOString()
+    jsonrpc: '2.0',
+    id: null,
+    error: {
+      code: -32601,
+      message: 'Method not found',
+      data: {
+        path: req.path,
+        method: req.method,
+        timestamp: new Date().toISOString()
+      }
+    }
   })
 })
 
 // Validate configuration before starting
 validateConfig()
 
-// Start HTTP server for health checks
+// Start HTTP server
 const httpServer = app.listen(CONFIG.HTTP_PORT, () => {
-  log('info', `HTTP server started on port ${CONFIG.HTTP_PORT}`)
-})
-
-// Start MCP server with SSE transport
-const transport = new StdioServerTransport()
-
-mcpServer.connect(transport).then(() => {
-  log('info', `MCP server started with SSE transport on /sse`, {
-    httpPort: CONFIG.HTTP_PORT,
-    apiBaseUrl: CONFIG.API_BASE_URL,
-    tools: MCP_TOOLS.length,
-    cacheEnabled: true,
-    nodeEnv: CONFIG.NODE_ENV
+  log('info', `HTTP server started on port ${CONFIG.HTTP_PORT}`, {
+    endpoints: {
+      health: `http://localhost:${CONFIG.HTTP_PORT}/health`,
+      info: `http://localhost:${CONFIG.HTTP_PORT}/mcp`
+    }
   })
-}).catch((error) => {
-  log('error', 'Failed to start MCP server', { error: error.message })
-  process.exit(1)
 })
+
+// Map to store transports by session ID
+const transports = new Map()
+
+// MCP endpoint handler for StreamableHTTP transport
+app.post('/mcp', async (req, res) => {
+  try {
+    log('debug', 'Received MCP request', { 
+      sessionId: req.headers['mcp-session-id'],
+      method: req.body?.method 
+    })
+    
+    // Check for existing session ID
+    const sessionId = req.headers['mcp-session-id']
+    let transport
+    
+    if (sessionId && transports.has(sessionId)) {
+      // Reuse existing transport
+      transport = transports.get(sessionId)
+    } else if (!sessionId || req.body?.method === 'initialize') {
+      // New initialization request
+      transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        onsessioninitialized: (sessionId) => {
+          log('info', `MCP session initialized: ${sessionId}`)
+          transports.set(sessionId, transport)
+        }
+      })
+      
+      // Connect server to transport
+      await mcpServer.connect(transport)
+      
+      // Clean up on close
+      mcpServer.onclose = async () => {
+        const sid = transport.sessionId
+        if (sid && transports.has(sid)) {
+          log('info', `MCP session closed: ${sid}`)
+          transports.delete(sid)
+        }
+      }
+    } else {
+      return res.status(400).json({
+        jsonrpc: '2.0',
+        id: req.body?.id || null,
+        error: {
+          code: -32000,
+          message: 'Bad Request: No valid session ID provided'
+        }
+      })
+    }
+    
+    // Handle the request with the transport
+    await transport.handleRequest(req, res)
+    
+  } catch (error) {
+    log('error', 'MCP request failed', { error: error.message })
+    
+    res.status(500).json({
+      jsonrpc: '2.0',
+      id: req.body?.id || null,
+      error: {
+        code: -32603,
+        message: 'Internal error',
+        data: CONFIG.NODE_ENV === 'production' ? undefined : error.message
+      }
+    })
+  }
+})
+
+// Handle DELETE requests for session termination
+app.delete('/mcp', async (req, res) => {
+  const sessionId = req.headers['mcp-session-id']
+  
+  if (!sessionId || !transports.has(sessionId)) {
+    return res.status(400).json({
+      jsonrpc: '2.0',
+      error: {
+        code: -32000,
+        message: 'Bad Request: No valid session ID provided'
+      }
+    })
+  }
+  
+  log('info', `MCP session termination requested: ${sessionId}`)
+  
+  try {
+    const transport = transports.get(sessionId)
+    await transport.close()
+    transports.delete(sessionId)
+    res.status(200).json({ message: 'Session terminated' })
+  } catch (error) {
+    log('error', 'Session termination failed', { error: error.message })
+    res.status(500).json({
+      jsonrpc: '2.0',
+      error: {
+        code: -32603,
+        message: 'Failed to terminate session'
+      }
+    })
+  }
+})
+
+log('info', 'MCP server configured with StreamableHTTP transport', {
+  endpoint: '/mcp',
+  protocolVersion: '2024-11-05',
+  tools: MCP_TOOLS.length,
+  capabilities: {
+    tools: { listChanged: true },
+    resources: {}
+  },
+  transport: 'StreamableHTTP',
+  cacheEnabled: true,
+  nodeEnv: CONFIG.NODE_ENV
+})
+
+// Function to send tool list changed notifications
+function notifyToolsChanged() {
+  try {
+    mcpServer.notification({
+      method: 'notifications/tools/list_changed'
+    })
+    log('info', 'Sent tools/list_changed notification')
+  } catch (error) {
+    log('error', 'Failed to send tools notification', { error: error.message })
+  }
+}
 
 // Graceful shutdown
 function gracefulShutdown(signal) {
