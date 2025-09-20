@@ -101,7 +101,7 @@ router.get('/', (req, res) => {
       }
     },
     support: {
-      repository: 'https://github.com/yourusername/sleeper-api-middleware',
+      repository: 'https://github.com/bryantbackus/sleeper-api-middleware',
       documentation: 'https://docs.sleeper.com/'
     }
   })

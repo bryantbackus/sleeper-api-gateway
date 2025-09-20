@@ -45,7 +45,7 @@ app.use(helmet({
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? [process.env.DOMAIN, `https://${process.env.DOMAIN}`, `https://api.${process.env.DOMAIN}`]
+    ? [`https://${process.env.DOMAIN}`]
     : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:8080'],
   credentials: true,
   optionsSuccessStatus: 200
@@ -54,12 +54,12 @@ app.use(cors({
 // Compression middleware
 app.use(compression())
 
+// Apply rate limiting
+app.use(generalLimiter)
+
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
-
-// Apply rate limiting
-app.use(generalLimiter)
 
 // Request logging middleware
 app.use((req, res, next) => {

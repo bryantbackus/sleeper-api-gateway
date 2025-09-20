@@ -69,7 +69,7 @@ http {
     # HTTP server configuration (no SSL)
     server {
         listen 80;
-        server_name ${DOMAIN} api.${DOMAIN} localhost;
+        server_name ${DOMAIN} localhost;
 
         # Security headers (no HSTS for HTTP)
         add_header X-Frame-Options DENY;

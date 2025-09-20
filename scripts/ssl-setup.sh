@@ -18,7 +18,6 @@ source .env
 # Check required variables
 if [ -z "$DOMAIN" ] || [ "$DOMAIN" = "localhost" ]; then
     echo "❌ DOMAIN not set or set to localhost. Please update .env file."
-    echo "   Set DOMAIN=api.sleeper.bryantback.us"
     exit 1
 fi
 

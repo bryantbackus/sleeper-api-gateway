@@ -3,7 +3,6 @@ const { query, param, validationResult } = require('express-validator')
 const cacheService = require('../services/cacheService')
 const playerSearchService = require('../services/playerSearchService')
 const { requireAPIKey, optionalAPIKey } = require('../middleware/simpleAuth')
-const { generalLimiter } = require('../middleware/rateLimiter')
 const { authAwareRateLimiters } = require('../middleware/authAwareRateLimit')
 const logger = require('../config/logger')
 

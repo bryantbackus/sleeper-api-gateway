@@ -2,22 +2,23 @@
 
 Complete guide for deploying the Sleeper API Middleware using Docker and Docker Compose.
 
-## 🚀 Quick Start (Recommended)
+## 🚀 Quick Start
 
-### **One-Command Deploy**
 ```bash
+# Clone and deploy in one command
+git clone <your-repo-url>
+cd sleeper-api-middleware
 npm run deploy
 ```
 
-This runs the Docker setup script that:
+**What this does:**
 - ✅ Checks Docker installation
-- ✅ Creates secure environment configuration
+- ✅ Creates secure configuration
 - ✅ Generates encryption keys
 - ✅ Builds Docker images
 - ✅ Starts services with smart SSL detection
 - ✅ Creates initial API key
 - ✅ Offers automated SSL setup (if domain provided)
-- ✅ Provides connection details
 
 ## 📋 Prerequisites
 
@@ -41,38 +42,20 @@ docker-compose --version
 docker run hello-world
 ```
 
-## 🏗️ Deployment Methods
+## 🔧 Manual Setup (Alternative)
 
-### **Method 1: Automated Setup (Recommended)**
-```bash
-# Clone repository
-git clone <your-repo-url>
-cd sleeper-api-middleware
+If you prefer manual control:
 
-# Run automated Docker setup
-npm run deploy
-```
-
-### **Method 2: Manual Setup**
 ```bash
 # 1. Create environment file
 cp env.example .env
 # Edit .env with your configuration
 
-# 2. Build images
-npm run docker:build
-
-# 3. Start services
+# 2. Build and start services
 npm run docker:up
 
-# 4. Create API key manually
+# 3. Create API key manually
 curl -X POST http://localhost/auth/dev-key
-```
-
-### **Method 3: Development Mode**
-```bash
-# Use development Docker Compose
-docker-compose -f docker-compose.dev.yml up -d
 ```
 
 ## ⚙️ Configuration Options
@@ -86,11 +69,9 @@ DOMAIN=your-domain.com
 
 # Security (auto-generated)
 MASTER_KEY=your-generated-master-key
-JWT_SECRET=your-generated-jwt-secret
 
-# Sleeper Account (optional)
-DEFAULT_USER_ID=your-sleeper-user-id
-DEFAULT_USERNAME=your-sleeper-username
+# Sleeper Configuration
+SLEEPER_BASE_URL=https://api.sleeper.app/v1
 
 # Database
 DATABASE_PATH=/app/data/database.sqlite
@@ -101,14 +82,10 @@ CACHE_TIMEZONE=America/New_York
 
 # Logging
 LOG_LEVEL=info
-```
 
-### **Docker-Specific (.env.docker)**
-```env
-# Docker Configuration
-COMPOSE_PROJECT_NAME=sleeper-api-middleware
-DOCKER_BUILDKIT=1
-DOMAIN=your-domain.com
+# SSL Configuration
+ENABLE_SSL=true
+SSL_EMAIL=your-email@domain.com
 ```
 
 ## 🔧 Service Management
@@ -188,12 +165,10 @@ docker-compose exec sleeper-api env
 - **Purpose**: Automatic SSL certificate generation (production)
 - **Profile**: `production` (optional service)
 
-## 🔒 Security Configuration
+## 🔒 SSL/HTTPS Setup
 
-### **SSL/HTTPS Setup**
-
-#### **Automatic SSL (Recommended)**
-The deployment script now includes integrated SSL setup:
+### **Automatic SSL (Recommended)**
+The deployment script includes integrated SSL setup:
 
 ```bash
 # During deployment, when prompted:
@@ -203,25 +178,17 @@ Email for SSL certificate: your-email@domain.com
 Run SSL certificate setup now? (y/n): y
 ```
 
-#### **Manual SSL Setup**
+### **Manual SSL Management**
 ```bash
-# Run the automated SSL setup script
+# Run full SSL setup
 npm run ssl:setup
 
-# Or use individual commands
+# Individual SSL commands
 npm run ssl:generate   # Generate certificates
 npm run ssl:status     # Check status
 npm run ssl:renew      # Renew certificates
-```
-
-#### **Development (Self-Signed)**
-```bash
-# Generate self-signed certificates for localhost
-mkdir -p nginx/ssl/live/localhost
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout nginx/ssl/live/localhost/privkey.pem \
-  -out nginx/ssl/live/localhost/fullchain.pem \
-  -subj "/C=US/ST=State/L=City/O=Org/CN=localhost"
+npm run ssl:enable     # Enable SSL
+npm run ssl:disable    # Disable SSL
 ```
 
 ### **API Key Management**
@@ -244,257 +211,84 @@ curl -X POST http://localhost/auth/dev-key \
   -d '{"userId": "admin", "description": "Production API key"}'
 ```
 
-## 📊 Monitoring & Logging
+## 📊 Monitoring
 
-### **Health Checks**
+### **Health & Logs**
 ```bash
-# Application health
+# Check application health
 curl http://localhost/health
 
-# Container health status
-docker-compose ps
-
-# Detailed health information
-docker inspect sleeper-api-middleware | grep -A 5 Health
-```
-
-### **Log Management**
-```bash
-# View all logs
+# View logs
 npm run docker:logs
-
-# View specific service logs
 docker-compose logs -f sleeper-api
-docker-compose logs -f nginx
 
-# Log files location
-ls -la logs/           # Application logs
-ls -la nginx/logs/     # Nginx logs
-```
-
-### **Performance Monitoring**
-```bash
-# Resource usage
+# Check resource usage
 docker stats
-
-# Container metrics
-docker-compose top
-
-# Database size
-docker-compose exec sleeper-api du -sh /app/data/
 ```
 
-## 🚀 Production Deployment
+## 🚀 Production Checklist
 
-### **Pre-Deployment Checklist**
+**Before deploying:**
 - [ ] Domain DNS pointing to server
 - [ ] Firewall configured (ports 80, 443)
-- [ ] SSL certificates ready or Let's Encrypt configured
-- [ ] Environment variables secured
-- [ ] Backup strategy in place
-- [ ] Monitoring configured
+- [ ] SSL email configured
 
-### **Deployment Steps**
+**Deploy:**
 ```bash
-# 1. Clone on production server
+# Clone and deploy
 git clone <repo> /opt/sleeper-api-middleware
 cd /opt/sleeper-api-middleware
+npm run deploy
 
-# 2. Run production setup
-NODE_ENV=production npm run deploy
-
-# 3. Configure SSL (if not using Let's Encrypt)
-# Copy SSL certificates to nginx/ssl/
-
-# 4. Start with SSL profile
-docker-compose --profile production up -d
-
-# 5. Verify deployment
+# Verify
 curl https://your-domain.com/health
 ```
 
-### **Auto-Updates with Watchtower**
-```yaml
-# Add to docker-compose.yml
-watchtower:
-  image: containrrr/watchtower
-  volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-  command: --interval 3600 --cleanup
-```
+## 🔄 Backup
 
-## 🔄 Backup & Recovery
-
-### **Data Backup**
 ```bash
 # Backup database
 docker-compose exec sleeper-api cp /app/data/database.sqlite /app/data/backup-$(date +%Y%m%d).sqlite
 
-# Copy backup to host
-docker cp sleeper-api-middleware:/app/data/backup-$(date +%Y%m%d).sqlite ./backup/
-
-# Backup entire data volume
-docker run --rm -v sleeper-api-middleware_api_data:/data -v $(pwd):/backup alpine tar czf /backup/data-backup-$(date +%Y%m%d).tar.gz -C /data .
-```
-
-### **Configuration Backup**
-```bash
-# Backup configuration files
-tar czf config-backup-$(date +%Y%m%d).tar.gz .env .env.docker docker-compose.yml nginx/
-```
-
-### **Recovery**
-```bash
-# Restore data volume
-docker run --rm -v sleeper-api-middleware_api_data:/data -v $(pwd):/backup alpine tar xzf /backup/data-backup-YYYYMMDD.tar.gz -C /data
-
-# Restart services
-npm run docker:restart
+# Backup configuration
+tar czf config-backup-$(date +%Y%m%d).tar.gz .env docker-compose.yml nginx/
 ```
 
 ## 🐛 Troubleshooting
 
 ### **Common Issues**
 
-#### **Port Already in Use**
+**Port conflicts:**
 ```bash
-# Check what's using port 80/443
+# Check what's using ports
 sudo lsof -i :80
 sudo lsof -i :443
-
-# Stop conflicting services
-sudo systemctl stop apache2
-sudo systemctl stop nginx
 ```
 
-#### **Permission Denied**
+**Container issues:**
 ```bash
-# Fix Docker permissions (Linux)
-sudo usermod -aG docker $USER
-newgrp docker
-
-# Fix volume permissions
-sudo chown -R $USER:$USER data/ logs/
-```
-
-#### **Container Won't Start**
-```bash
-# Check container logs
+# Check logs
 docker-compose logs sleeper-api
 
-# Check Docker daemon
-sudo systemctl status docker
-
-# Rebuild images
-npm run docker:build
-```
-
-#### **Database Issues**
-```bash
-# Reset database
-docker-compose down -v
-docker volume rm sleeper-api-middleware_api_data
-npm run docker:up
-```
-
-#### **SSL Certificate Issues**
-```bash
-# Check certificate validity
-openssl x509 -in nginx/ssl/fullchain.pem -text -noout
-
-# Regenerate self-signed certificates
-rm nginx/ssl/*.pem
-# Run SSL setup commands above
-```
-
-### **Debug Mode**
-```bash
-# Start with debug logging
-docker-compose exec sleeper-api \
-  env LOG_LEVEL=debug node src/server.js
-
-# Inspect container filesystem
-docker-compose exec sleeper-api sh
-```
-
-### **Performance Issues**
-```bash
-# Check resource usage
-docker stats
-
-# Increase container resources (if using Docker Desktop)
-# Go to Settings > Resources > Advanced
-
-# Check database performance
-docker-compose exec sleeper-api \
-  sqlite3 /app/data/database.sqlite "PRAGMA optimize;"
-```
-
-## 📈 Scaling & Load Balancing
-
-### **Horizontal Scaling**
-```bash
-# Scale API service
-docker-compose up -d --scale sleeper-api=3
-
-# Nginx will automatically load balance
-```
-
-### **External Load Balancer**
-```yaml
-# docker-compose.yml modification for external LB
-services:
-  sleeper-api:
-    ports:
-      - "3000-3002:3000"  # Expose multiple ports
-```
-
-## 🔧 Customization
-
-### **Custom Nginx Configuration**
-Edit `nginx/nginx.conf` and rebuild:
-```bash
+# Rebuild and restart
 npm run docker:build
 npm run docker:restart
 ```
 
-### **Custom Environment**
-Create custom Docker Compose file:
-```yaml
-# docker-compose.custom.yml
-version: '3.8'
-services:
-  sleeper-api:
-    environment:
-      - CUSTOM_SETTING=value
-```
-
-Run with:
+**Database issues:**
 ```bash
-docker-compose -f docker-compose.yml -f docker-compose.custom.yml up -d
+# Reset database
+docker-compose down -v
+npm run docker:up
 ```
 
 ## 📞 Support
 
-### **Getting Help**
+**Need help?**
 - Check logs: `npm run docker:logs`
-- Review this guide
-- Check GitHub issues
-- Container status: `docker-compose ps`
-
-### **Reporting Issues**
-Include this information:
-```bash
-# System info
-docker --version
-docker-compose --version
-uname -a
-
-# Container status
-docker-compose ps
-docker-compose logs --tail=50
-```
+- Review the [main README](../README.md)
+- Check container status: `docker-compose ps`
 
 ---
 
-**🎯 This Docker deployment provides a production-ready, secure, and scalable API middleware solution!**
+**🎯 Ready for production deployment!**

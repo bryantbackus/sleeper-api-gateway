@@ -12,7 +12,6 @@
  */
 
 const fs = require('fs')
-const path = require('path')
 const crypto = require('crypto')
 const readline = require('readline')
 const { execSync } = require('child_process')
@@ -35,10 +34,6 @@ function generateSecureKey() {
   return crypto.randomBytes(32).toString('hex')
 }
 
-function generateAPIKey() {
-  return crypto.randomBytes(32).toString('hex')
-}
-
 async function createEnvFile(config) {
   const envContent = `# Sleeper API Middleware Configuration
 # Generated on ${new Date().toISOString()}
@@ -49,9 +44,6 @@ PORT=3000
 
 # Security Keys (Auto-generated)
 MASTER_KEY=${config.masterKey}
-
-# Sleeper accounts configured per user via /profile endpoints
-# No default configuration needed for multi-user deployment
 
 # Database Configuration
 DATABASE_PATH=/app/data/database.sqlite
@@ -295,9 +287,6 @@ async function main() {
   } else {
     config.enableSsl = false
   }
-  
-  // Note: Sleeper accounts are configured per user via /profile endpoints
-  // No default configuration needed for multi-user deployment
   
   // Generate secure keys
   console.log('\n🔐 Generating secure keys...')

@@ -36,13 +36,13 @@ const loadUserProfile = async (req, res, next) => {
 }
 
 /**
- * Get default profile (falls back to environment variables)
+ * Get default profile (no environment fallbacks in multi-user architecture)
  */
 const getDefaultProfile = () => {
   return {
     user_id: 'default',
-    sleeper_user_id: process.env.DEFAULT_USER_ID || null,
-    sleeper_username: process.env.DEFAULT_USERNAME || null,
+    sleeper_user_id: null,    
+    sleeper_username: null,      
     display_name: 'Default User',
     preferences: {},
     created_at: new Date().toISOString(),
@@ -52,21 +52,17 @@ const getDefaultProfile = () => {
 
 /**
  * Get effective Sleeper user ID for a request
- * Priority: user profile > environment default > null
+ * Priority: user profile > null (no environment default)
  */
 const getEffectiveSleeperUserId = (req) => {
-  return req.userProfile?.sleeper_user_id || 
-         process.env.DEFAULT_USER_ID || 
-         null
+  return req.userProfile?.sleeper_user_id || null 
 }
 
 /**
  * Get effective Sleeper username for a request
  */
 const getEffectiveSleeperUsername = (req) => {
-  return req.userProfile?.sleeper_username || 
-         process.env.DEFAULT_USERNAME || 
-         null
+  return req.userProfile?.sleeper_username || null
 }
 
 /**

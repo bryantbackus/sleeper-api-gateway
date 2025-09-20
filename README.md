@@ -34,10 +34,29 @@ A fast, secure, and intelligent API middleware server for the Sleeper fantasy fo
 
 ### Prerequisites
 
-- Node.js 18+
-- Your Sleeper username/user ID (find it at sleeper.app in your profile URL)
+- **Docker and Docker Compose** (for production deployment)
+- **Node.js 18+** (for local development)
+- Domain name (for SSL) or localhost for testing
 
-### Option 1: Instant Setup (Recommended)
+### Option 1: Docker Deployment (Recommended)
+
+```bash
+git clone <your-repo-url>
+cd sleeper-api-middleware
+npm run deploy
+```
+
+This single command will:
+1. Check Docker installation
+2. Run interactive setup (< 2 minutes)
+3. Create secure configuration
+4. Build Docker images
+5. Start services with smart SSL detection
+6. Generate your API key
+7. Offer automated SSL setup (if domain provided)
+8. Show connection details
+
+### Option 2: Local Development
 
 ```bash
 git clone <your-repo-url>
@@ -45,22 +64,26 @@ cd sleeper-api-middleware
 npm run quick-start
 ```
 
-This single command will:
-1. Run the interactive setup (< 2 minutes)
-2. Install all dependencies  
-3. Start the server
+This runs local development without Docker:
+1. Interactive setup
+2. Install dependencies
+3. Start the server locally
 4. Generate your API key
-5. Show you how to test everything
 
-### Option 2: Step by Step
+### 📋 **Which Option Should I Choose?**
 
-```bash
-git clone <your-repo-url>
-cd sleeper-api-middleware
-npm install
-npm run setup    # Interactive configuration
-npm start        # Start the server
-```
+**Use `npm run deploy` (Docker) if:**
+- ✅ Deploying to production
+- ✅ Need SSL/HTTPS support
+- ✅ Want containerized deployment
+- ✅ Need reverse proxy (Nginx)
+- ✅ Planning to scale
+
+**Use `npm run quick-start` (Local) if:**
+- ✅ Just testing/developing
+- ✅ Don't need SSL
+- ✅ Want to run locally without Docker
+- ✅ Quick prototyping
 
 ### 🧪 Test Your Setup
 
@@ -196,6 +219,7 @@ POST /players/cache/refresh
 
 The middleware includes intelligent caching to minimize API calls and improve performance:
 
+#### **Cache Management Commands**
 ```bash
 # Check cache statistics
 curl http://localhost:3000/cache/stats
@@ -211,7 +235,8 @@ curl -I -H "X-API-Key: YOUR_KEY" \
   http://localhost:3000/players/search/name?q=mahomes
 ```
 
-**Cache TTLs:**
+#### **Cache Configuration**
+**TTLs by Data Type:**
 - Player data: 30 minutes
 - League data: 10 minutes  
 - Matchups/transactions: 2 minutes
@@ -223,6 +248,12 @@ curl -I -H "X-API-Key: YOUR_KEY" \
 - Smart cache keys including user context
 - Cache hit/miss headers for debugging
 - Retry logic with exponential backoff
+
+**Automatic Refresh:**
+- Daily refresh at 6 AM EST
+- Startup check for stale data
+- Background processing (non-blocking)
+- Manual refresh via API endpoints
 
 ## 🔧 Configuration
 
@@ -237,11 +268,9 @@ PORT=3000
 
 # Security Keys (auto-generated during setup)
 MASTER_KEY=your-auto-generated-master-key
-JWT_SECRET=your-auto-generated-jwt-secret
 
-# Your Sleeper Account
-DEFAULT_USER_ID=your_sleeper_user_id
-DEFAULT_USERNAME=your_sleeper_username
+# Sleeper Configuration
+SLEEPER_BASE_URL=https://api.sleeper.app/v1
 
 # Database & Cache
 DATABASE_PATH=./data/database.sqlite
@@ -251,35 +280,28 @@ CACHE_TIMEZONE=America/New_York
 # Logging
 LOG_LEVEL=info
 
+# SSL/HTTPS Configuration (for production with custom domain)
+DOMAIN=localhost
+SSL_EMAIL=your-email@domain.com
+ENABLE_SSL=false
+
 # Optional: Disable caching for testing
 # DISABLE_CACHE=false
 ```
 
-### Finding Your Sleeper User ID
+### Multi-User Configuration
 
-1. Go to [sleeper.app](https://sleeper.app)
-2. Navigate to your profile
-3. Your user ID is in the URL: `sleeper.app/profile/[USER_ID]`
+After deployment, each user configures their own Sleeper account:
 
-## 🐳 Docker Deployment (Recommended)
+1. **Create an API key** using the master key
+2. **Set your profile** via `/profile` endpoints
+3. **Configure your Sleeper credentials** (user ID and username)
 
-### 🚀 **One-Command Deploy**
-```bash
-# Automated Docker setup (handles everything)
-npm run deploy
-```
+See the [API Documentation](#-api-documentation) for profile management endpoints.
 
-This command:
-- ✅ Checks Docker installation
-- ✅ Creates secure configuration (.env)
-- ✅ Generates encryption keys  
-- ✅ Builds Docker images
-- ✅ Starts services with smart SSL detection
-- ✅ Creates initial API key
-- ✅ Offers automated SSL setup (if domain provided)
-- ✅ Shows connection details
+## 🔧 **Docker Commands**
 
-### 🔧 **Manual Docker Commands**
+### **Manual Docker Commands**
 ```bash
 # Build and start services
 npm run docker:up
@@ -305,13 +327,8 @@ npm run ssl:enable     # Enable SSL
 npm run ssl:disable    # Disable SSL
 ```
 
-### 🛠️ **Development with Docker**
-```bash
-# Start with hot reload
-docker-compose -f docker-compose.dev.yml up -d
-```
 
-### 📖 **Detailed Docker Guide**
+### **Detailed Docker Guide**
 See [DOCKER_DEPLOYMENT.md](./DOCKER_DEPLOYMENT.md) for comprehensive Docker deployment documentation including:
 - SSL/HTTPS setup
 - Production configuration
@@ -349,12 +366,6 @@ See [DOCKER_DEPLOYMENT.md](./DOCKER_DEPLOYMENT.md) for comprehensive Docker depl
 
 ## ⚡ Performance Features
 
-### Caching Strategy
-- **Player Data**: Cached daily at 6 AM EST
-- **Trending Players**: Cached daily (add/drop separately)
-- **Smart Refresh**: Auto-refresh on startup if data is stale
-- **Background Updates**: Non-blocking cache refreshes
-
 ### Rate Limiting
 - **General API**: 100 requests per 15 minutes
 - **Sleeper Proxy**: 50 requests per minute
@@ -376,40 +387,20 @@ npm test             # Run tests
 ### Project Structure
 ```
 src/
-├── config/          # Database, logging, passport configuration
-├── controllers/     # Route controllers (future expansion)
-├── middleware/      # Authentication, rate limiting middleware
-├── models/          # Data models (future expansion)
-├── routes/          # Express routes
+├── config/          # Database and logging configuration
+├── middleware/      # Authentication, rate limiting, caching middleware
+├── routes/          # Express route handlers
 ├── services/        # Business logic services
 ├── utils/           # Utility functions
 └── server.js        # Main application entry
 
-nginx/               # Nginx configuration
-docker/              # Docker configurations
+nginx/               # Nginx configuration and templates
 scripts/             # Deployment and setup scripts
+tests/               # Automated and manual testing
+├── automated/       # Jest test suites
+└── postman/         # Postman collections and guides
 ```
 
-## 🔄 Cache Management
-
-The system automatically manages player data caching:
-
-- **Automatic Refresh**: Every day at 6 AM EST
-- **Startup Check**: Refreshes if data is stale on startup
-- **Manual Refresh**: Via API endpoint for administrators
-- **Background Processing**: Non-blocking cache updates
-
-### Cache Status
-Check cache status and force refresh:
-```bash
-# Get status
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:3000/players/cache/status
-
-# Force refresh
-curl -X POST -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:3000/players/cache/refresh
-```
 
 ## 🌐 Production Deployment
 

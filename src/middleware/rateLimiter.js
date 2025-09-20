@@ -24,28 +24,6 @@ const generalLimiter = rateLimit({
   }
 })
 
-// Rate limiter for Sleeper API proxy requests (more restrictive)
-const sleeperApiLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 50, // Limit each IP to 50 requests per minute (staying under Sleeper's 1000/min limit)
-  message: {
-    error: 'Rate limit exceeded',
-    message: 'Too many API requests. Please slow down.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (req, res) => {
-    logger.warn('Sleeper API rate limit exceeded:', {
-      ip: req.ip,
-      userAgent: req.get('User-Agent'),
-      path: req.path
-    })
-    res.status(429).json({
-      error: 'Rate limit exceeded',
-      message: 'Too many API requests. Please slow down.'
-    })
-  }
-})
 
 // Rate limiter for authentication endpoints
 const authLimiter = rateLimit({
@@ -73,7 +51,6 @@ const authLimiter = rateLimit({
 
 module.exports = {
   generalLimiter,
-  sleeperApiLimiter,
   authLimiter
 }
 
