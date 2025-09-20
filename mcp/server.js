@@ -356,7 +356,7 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
 })
 
 // Enhanced health check endpoint
-app.get('/health', async (req, res) => {
+app.get('/mcp/health', async (req, res) => {
   const health = {
     status: 'ok',
     service: 'sleeper-mcp-server',
@@ -410,8 +410,8 @@ app.get('/mcp/info', (req, res) => {
       resources: {}
     },
     endpoints: {
-      health: '/health',
-      info: '/mcp',
+      health: '/mcp/health',
+      info: '/mcp/info',
       mcp: '/mcp'
     },
     features: {
