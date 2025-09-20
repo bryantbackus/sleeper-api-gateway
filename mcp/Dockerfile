@@ -14,8 +14,8 @@ RUN addgroup -g 1001 nodejs && \
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --omit=dev && \
+# Install dependencies (use npm install since no package-lock.json)
+RUN npm install --omit=dev --no-audit --no-fund && \
     npm cache clean --force
 
 # Copy application code
