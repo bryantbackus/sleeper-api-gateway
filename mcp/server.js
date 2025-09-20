@@ -155,11 +155,6 @@ function validateArgs(toolName, args) {
 // Enhanced API call function
 async function callSleeperAPI(endpoint, method = 'GET', data = null, apiKey = null, useCache = false) {
   try {
-    // Require API key - no fallback
-    if (!apiKey) {
-      throw new Error('API key is required. Please provide an API key via X-API-Key header or apiKey parameter.')
-    }
-
     // Check cache for GET requests
     const cacheKey = `${method}:${endpoint}:${JSON.stringify(data || {})}`
     if (useCache && method === 'GET') {
@@ -180,7 +175,7 @@ async function callSleeperAPI(endpoint, method = 'GET', data = null, apiKey = nu
       url: `${CONFIG.API_BASE_URL}${endpoint}`,
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': apiKey
+        ...(apiKey && { 'X-API-Key': apiKey })
       },
       timeout: CONFIG.REQUEST_TIMEOUT
     }
