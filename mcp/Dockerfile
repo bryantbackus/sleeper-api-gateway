@@ -19,7 +19,7 @@ RUN npm install --omit=dev --no-audit --no-fund && \
     npm cache clean --force
 
 # Copy application code
-COPY server.js ./
+COPY *.js ./
 
 # Create directories and set permissions
 RUN mkdir -p /app/logs && \
