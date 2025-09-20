@@ -259,7 +259,7 @@ const mcpServer = new Server(
 )
 
 // Unified tool execution function
-async function executeTool(toolName, args, apiKey) {
+async function executeTool(toolName, args) {
   // Validate input arguments
   const validation = validateArgs(toolName, args)
   if (!validation.valid) {
@@ -271,6 +271,9 @@ async function executeTool(toolName, args, apiKey) {
   if (!handler) {
     throw new Error(`Unknown tool: ${toolName}`)
   }
+
+  // Extract API key from arguments (let backend handle auth)
+  const apiKey = args?.apiKey || null
 
   // Execute tool
   const result = await handler(args, apiKey)
@@ -303,19 +306,13 @@ mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params
   
-  // Extract API key from request headers or arguments
-  const apiKey = request.meta?.headers?.['x-api-key'] || 
-                 request.meta?.headers?.['X-API-Key'] || 
-                 args?.apiKey || 
-                 null
-  
   log('info', `MCP tool called: ${name}`, { 
     arguments: Object.keys(args || {}),
-    hasApiKey: !!apiKey
+    tool: name
   })
 
   try {
-    const result = await executeTool(name, args, apiKey)
+    const result = await executeTool(name, args)
     
     const response = {
       content: [{
@@ -427,7 +424,6 @@ app.get('/mcp/info', (req, res) => {
   })
 })
 
-
 // MCP GET endpoint for connection establishment (required by StreamableHTTP)
 app.get('/mcp', async (req, res) => {
   try {
@@ -515,19 +511,12 @@ app.post('/mcp', async (req, res) => {
       case 'tools/call':
         const { name, arguments: args } = params
         
-        // Extract API key from request headers or arguments
-        const apiKey = req.headers['x-api-key'] || 
-                       req.headers['X-API-Key'] || 
-                       args?.apiKey || 
-                       null
-        
         log('info', `MCP tool called: ${name}`, { 
           arguments: Object.keys(args || {}),
-          hasApiKey: !!apiKey
         })
 
         try {
-          const result = await executeTool(name, args, apiKey)
+          const result = await executeTool(name, args)
           
           res.json({
             jsonrpc: '2.0',
