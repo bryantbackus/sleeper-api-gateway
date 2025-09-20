@@ -6,8 +6,7 @@
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { ListToolsRequestSchema, CallToolRequestSchema, ListResourcesRequestSchema, ReadResourceRequestSchema } from '@modelcontextprotocol/sdk/types.js'
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
 import express from 'express'
 import cors from 'cors'
 import axios from 'axios'
@@ -1084,20 +1083,15 @@ async function executeTool(toolName, args, apiKey) {
 // MCP Request Handlers
 
 // List available tools
-mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
+mcpServer.setRequestHandler('tools/list', async () => {
   log('info', 'Listing MCP tools', { count: MCP_TOOLS.length })
   return {
     tools: MCP_TOOLS
   }
 })
 
-
-// Read a resource (if any)
-mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  throw new Error('No resources available')
-})
 // Call a tool
-mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
+mcpServer.setRequestHandler('tools/call', async (request) => {
   const { name, arguments: args } = request.params
   
   // Extract API key from request headers or arguments
@@ -1133,24 +1127,18 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 })
 
+// List available resources (if any)
+mcpServer.setRequestHandler('resources/list', async () => {
+  return {
+    resources: []
+  }
+})
 
 // Read a resource (if any)
-mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+mcpServer.setRequestHandler('resources/read', async (request) => {
   throw new Error('No resources available')
 })
 
-
-// Read a resource (if any)
-mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  throw new Error('No resources available')
-})
-// Read a resource (if any)
-
-
-// Read a resource (if any)
-mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  throw new Error('No resources available')
-})
 // Enhanced health check endpoint
 app.get('/health', async (req, res) => {
   const health = {
@@ -1192,11 +1180,6 @@ app.get('/health', async (req, res) => {
   res.status(health.status === 'ok' ? 200 : 503).json(health)
 })
 
-
-// Read a resource (if any)
-mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  throw new Error('No resources available')
-})
 // MCP info endpoint
 app.get('/mcp', (req, res) => {
   res.json({
@@ -1228,11 +1211,6 @@ app.get('/mcp', (req, res) => {
   })
 })
 
-
-// Read a resource (if any)
-mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  throw new Error('No resources available')
-})
 // HTTP tool list endpoint (for testing)
 app.post('/mcp/tools/list', (req, res) => {
   res.json({
@@ -1240,11 +1218,6 @@ app.post('/mcp/tools/list', (req, res) => {
   })
 })
 
-
-// Read a resource (if any)
-mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  throw new Error('No resources available')
-})
 // HTTP tool call endpoint (for testing)
 app.post('/mcp/tools/call', async (req, res) => {
   try {
@@ -1272,11 +1245,6 @@ app.post('/mcp/tools/call', async (req, res) => {
   }
 })
 
-
-// Read a resource (if any)
-mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  throw new Error('No resources available')
-})
 // Error handling middleware
 app.use((error, req, res, next) => {
   log('error', 'Express error', { 
@@ -1292,11 +1260,6 @@ app.use((error, req, res, next) => {
   })
 })
 
-
-// Read a resource (if any)
-mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  throw new Error('No resources available')
-})
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
@@ -1307,11 +1270,6 @@ app.use((req, res) => {
   })
 })
 
-
-// Read a resource (if any)
-mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  throw new Error('No resources available')
-})
 // Validate configuration before starting
 validateConfig()
 
@@ -1320,13 +1278,8 @@ app.listen(CONFIG.HTTP_PORT, () => {
   log('info', `HTTP server started on port ${CONFIG.HTTP_PORT}`)
 })
 
-
-// Read a resource (if any)
-mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  throw new Error('No resources available')
-})
 // Start MCP server with SSE transport
-const transport = new StdioServerTransport()
+const transport = new SSEServerTransport('/mcp', app)
 
 mcpServer.connect(transport).then(() => {
   log('info', `MCP server started on port ${CONFIG.MCP_PORT}`, {
@@ -1340,11 +1293,6 @@ mcpServer.connect(transport).then(() => {
   process.exit(1)
 })
 
-
-// Read a resource (if any)
-mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  throw new Error('No resources available')
-})
 // Graceful shutdown
 function gracefulShutdown(signal) {
   log('info', `${signal} received, shutting down gracefully`)
@@ -1377,20 +1325,10 @@ process.on('uncaughtException', (error) => {
   process.exit(1)
 })
 
-
-// Read a resource (if any)
-mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  throw new Error('No resources available')
-})
 process.on('unhandledRejection', (reason, promise) => {
   log('error', 'Unhandled rejection', { 
     reason: reason?.message || reason,
     promise: promise?.toString()
   })
   process.exit(1)
-})
-
-// Read a resource (if any)
-mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  throw new Error('No resources available')
 })
