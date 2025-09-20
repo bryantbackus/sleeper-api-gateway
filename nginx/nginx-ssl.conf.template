@@ -59,11 +59,18 @@ http {
     # Rate limiting zones
     limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
     limit_req_zone $binary_remote_addr zone=auth:10m rate=1r/s;
+    limit_req_zone $binary_remote_addr zone=mcp:10m rate=5r/s;
 
     # Upstream configuration for the API server
     upstream api_backend {
         server sleeper-api:3000;
         keepalive 32;
+    }
+
+    # Upstream configuration for the MCP server
+    upstream mcp_backend {
+        server sleeper-mcp:3001;
+        keepalive 16;
     }
 
     # HTTP to HTTPS redirect
@@ -140,6 +147,35 @@ http {
             
             # Support for OAuth redirects
             proxy_redirect off;
+        }
+
+        # MCP Server endpoints (separate rate limiting)
+        location /mcp/ {
+            limit_req zone=mcp burst=10 nodelay;
+            limit_req_status 429;
+            
+            proxy_pass http://mcp_backend;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header X-Forwarded-Host $host;
+            proxy_set_header X-Forwarded-Port $server_port;
+            
+            # CORS headers for MCP
+            add_header Access-Control-Allow-Origin *;
+            add_header Access-Control-Allow-Methods "GET, POST, OPTIONS";
+            add_header Access-Control-Allow-Headers "Content-Type, X-API-Key, Authorization";
+            
+            # Handle preflight requests
+            if ($request_method = 'OPTIONS') {
+                add_header Access-Control-Allow-Origin *;
+                add_header Access-Control-Allow-Methods "GET, POST, OPTIONS";
+                add_header Access-Control-Allow-Headers "Content-Type, X-API-Key, Authorization";
+                add_header Content-Length 0;
+                add_header Content-Type text/plain;
+                return 200;
+            }
         }
 
         # API endpoints (moderate rate limiting)

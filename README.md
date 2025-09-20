@@ -14,6 +14,8 @@ A fast, secure, and intelligent API middleware server for the Sleeper fantasy fo
 - **📝 Comprehensive Logging** - Winston-based logging with request tracking
 - **🏥 Health Monitoring** - Built-in health checks and cache statistics
 - **⚡ 2-Minute Setup** - Interactive setup script handles everything automatically
+- **🤖 MCP Server** - Model Context Protocol server for Claude integration
+- **🌐 Web Accessible** - MCP server accessible from browsers and AI tools
 
 ## 🏗️ Architecture
 
@@ -22,12 +24,18 @@ A fast, secure, and intelligent API middleware server for the Sleeper fantasy fo
 │   Nginx Proxy   │───▶│   Express API   │───▶│  Sleeper API    │
 │  (Rate Limiting)│    │   (Middleware)  │    │   (External)    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                       ┌─────────────────┐
-                       │   SQLite Cache  │
-                       │ (Player Data)   │
-                       └─────────────────┘
+         │                       │
+         │                       ▼
+         │              ┌─────────────────┐
+         │              │   SQLite Cache  │
+         │              │ (Player Data)   │
+         │              └─────────────────┘
+         │
+         ▼
+┌─────────────────┐    ┌─────────────────┐
+│   MCP Server    │───▶│   Express API   │
+│ (Claude Access) │    │   (Internal)    │
+└─────────────────┘    └─────────────────┘
 ```
 
 ## 🚀 Super Quick Start
@@ -298,6 +306,136 @@ After deployment, each user configures their own Sleeper account:
 3. **Configure your Sleeper credentials** (user ID and username)
 
 See the [API Documentation](#-api-documentation) for profile management endpoints.
+
+## 🤖 **MCP Server Integration**
+
+The MCP (Model Context Protocol) server provides Claude with direct access to your Sleeper API data through a standardized interface.
+
+### **Available MCP Tools**
+
+#### **Player Tools (7 tools)**
+- **`get_all_players`** - Get all NFL players (cached data)
+- **`get_trending_players`** - Get trending players (most added/dropped)
+- **`search_players_by_id`** - Search for a specific NFL player by Sleeper ID
+- **`search_players_by_name`** - Search for NFL players by name
+- **`search_players_by_position`** - Search for NFL players by position
+- **`search_players_by_team`** - Search for NFL players by team
+- **`get_active_players`** - Get only active NFL players
+
+#### **User Tools (3 tools)**
+- **`get_user_info`** - Get information about a Sleeper user
+- **`get_user_leagues`** - Get fantasy football leagues for a specific user
+- **`get_my_leagues`** - Get fantasy football leagues for the authenticated user
+
+#### **League Tools (7 tools)**
+- **`get_league_info`** - Get detailed information about a specific league
+- **`get_league_rosters`** - Get all rosters for a specific league
+- **`get_league_users`** - Get all users in a specific league
+- **`get_league_matchups`** - Get matchups for a specific league and week
+- **`get_league_playoff_bracket`** - Get playoff bracket for a specific league
+- **`get_league_transactions`** - Get transactions for a specific league
+- **`get_league_traded_picks`** - Get traded picks for a specific league
+
+#### **Draft Tools (5 tools)**
+- **`get_user_drafts`** - Get drafts for a specific user
+- **`get_league_drafts`** - Get drafts for a specific league
+- **`get_draft_info`** - Get detailed information about a specific draft
+- **`get_draft_picks`** - Get all picks for a specific draft
+- **`get_draft_traded_picks`** - Get traded picks for a specific draft
+
+#### **Profile Tools (5 tools)**
+- **`get_my_profile`** - Get the authenticated user's profile information
+- **`update_my_profile`** - Update the authenticated user's profile information
+- **`delete_my_profile`** - Delete the authenticated user's profile (reset to defaults)
+- **`verify_sleeper_user`** - Verify a Sleeper user ID exists and get their information
+- **`get_profile_status`** - Get profile status and recommendations for the authenticated user
+
+#### **System Tools (1 tool)**
+- **`get_nfl_state`** - Get current NFL state information (season, week, etc.)
+
+**Total: 28 MCP Tools** covering all available API endpoints
+
+### **Claude Integration**
+
+#### **Browser-Based Claude**
+```javascript
+// Each user provides their own API key
+const mcpClient = {
+  baseUrl: 'https://yourdomain.com/mcp',
+  apiKey: 'your-personal-api-key', // User's own API key
+  
+  async callTool(toolName, args) {
+    const response = await fetch(`${this.baseUrl}/tools/call`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': this.apiKey
+      },
+      body: JSON.stringify({ name: toolName, arguments: args })
+    })
+    return await response.json()
+  }
+}
+
+// Usage - each user uses their own API key
+const playerStats = await mcpClient.callTool('get_player_stats', { 
+  playerId: '12345', 
+  season: '2024' 
+})
+
+// Alternative: Pass API key in arguments
+const playerStats2 = await mcpClient.callTool('get_player_stats', { 
+  playerId: '12345', 
+  season: '2024',
+  apiKey: 'different-user-api-key'
+})
+```
+
+#### **MCP Client Library**
+```javascript
+import { Client } from '@modelcontextprotocol/sdk/client/index.js'
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
+
+const transport = new SSEClientTransport('https://yourdomain.com/mcp')
+const client = new Client({
+  name: 'claude-browser',
+  version: '1.0.0'
+}, { capabilities: {} })
+
+await client.connect(transport)
+const result = await client.callTool('get_player_stats', { playerId: '12345' })
+```
+
+### **MCP Server Features**
+
+- ✅ **MCP Compliant** - Follows official MCP specification
+- ✅ **Web Accessible** - Can be accessed from browsers via HTTP/HTTPS
+- ✅ **Isolated** - Runs in separate container with error isolation
+- ✅ **Rate Limited** - Separate rate limiting from main API
+- ✅ **CORS Enabled** - Supports cross-origin requests
+
+### **MCP Endpoints**
+
+- **Health Check**: `GET /mcp/health`
+- **MCP Info**: `GET /mcp/`
+- **List Tools**: `POST /mcp/tools/list`
+- **Call Tool**: `POST /mcp/tools/call`
+
+### **User API Key Management**
+
+Each user can use their own API key with the MCP server:
+
+#### **API Key Sources (both required):**
+1. **X-API-Key header** - `X-API-Key: your-api-key`
+2. **apiKey parameter** - `{ "apiKey": "your-api-key" }`
+
+**Note:** API key is required for all requests. No server default is provided.
+
+#### **Benefits:**
+- ✅ **Individual user accounts** - Each user accesses their own data
+- ✅ **Rate limiting per user** - Based on individual API keys
+- ✅ **User isolation** - Users only see their own leagues and data
+- ✅ **Flexible authentication** - Header or parameter-based
 
 ## 🔧 **Docker Commands**
 
