@@ -672,24 +672,25 @@ function notifyToolsChanged() {
 function gracefulShutdown(signal) {
   log('info', `${signal} received, shutting down gracefully`)
   
-  // Close all active transports
-  for (const [sessionId, transport] of transports) {
+  // Close cache
+  if (cache && typeof cache.close === 'function') {
     try {
-      transport.close()
-      log('info', `Closed transport for session: ${sessionId}`)
+      cache.close()
+      log('info', 'Cache closed successfully')
     } catch (error) {
-      log('error', `Failed to close transport for session ${sessionId}`, { error: error.message })
+      log('error', 'Error closing cache:', { error: error.message })
     }
   }
-  transports.clear()
-  
-  // Close cache
-  cache.close()
   
   // Close HTTP server
-  httpServer.close(() => {
-    log('info', 'HTTP server closed')
-    process.exit(0)
+  httpServer.close((error) => {
+    if (error) {
+      log('error', 'Error closing HTTP server:', { error: error.message })
+      process.exit(1)
+    } else {
+      log('info', 'HTTP server closed successfully')
+      process.exit(0)
+    }
   })
   
   // Force exit after 10 seconds
