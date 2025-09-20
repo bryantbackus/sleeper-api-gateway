@@ -335,13 +335,14 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
   } catch (error) {
     log('error', `MCP tool failed: ${name}`, { error: error.message })
     
-    // Return standardized JSON-RPC 2.0 error format
+    // Return standardized JSON-RPC 2.0 error format with detailed error information
     throw {
       code: -32603,
-      message: CONFIG.NODE_ENV === 'production' ? 'Tool execution failed' : error.message,
+      message: error.message,
       data: {
         tool: name,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        details: error.response?.data || error.stack
       }
     }
   }
@@ -546,10 +547,11 @@ app.post('/mcp', async (req, res) => {
             id,
             error: {
               code: -32603,
-              message: CONFIG.NODE_ENV === 'production' ? 'Tool execution failed' : error.message,
+              message: error.message,
               data: {
                 tool: name,
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                details: error.response?.data || error.stack
               }
             }
           })
@@ -591,7 +593,10 @@ app.post('/mcp', async (req, res) => {
       error: {
         code: -32603,
         message: 'Internal error',
-        data: CONFIG.NODE_ENV === 'production' ? undefined : error.message
+        data: {
+          error: error.message,
+          details: error.stack
+        }
       }
     })
   }
