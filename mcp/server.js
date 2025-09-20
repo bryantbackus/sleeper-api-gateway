@@ -5,12 +5,12 @@
  * Provides standardized MCP interface to Sleeper API middleware
  */
 
-const { Server } = require('@modelcontextprotocol/sdk/server/index.js')
-const { SSEServerTransport } = require('@modelcontextprotocol/sdk/server/sse.js')
-const express = require('express')
-const cors = require('cors')
-const axios = require('axios')
-const NodeCache = require('node-cache')
+import { Server } from '@modelcontextprotocol/sdk/server/index.js'
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
+import express from 'express'
+import cors from 'cors'
+import axios from 'axios'
+import NodeCache from 'node-cache'
 
 const app = express()
 
@@ -65,6 +65,7 @@ app.use(cors({
   optionsSuccessStatus: 200
 }))
 
+// Body parsing middleware
 app.use(express.json())
 
 // Enhanced logging function
@@ -269,7 +270,7 @@ async function callSleeperAPI(endpoint, method = 'GET', data = null, apiKey = nu
   }
 }
 
-// MCP Server configuration
+// Initialize MCP server
 const mcpServer = new Server(
   {
     name: 'sleeper-api-mcp',
