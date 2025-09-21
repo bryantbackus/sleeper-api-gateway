@@ -3,17 +3,13 @@
 /**
  * MCP Server for Sleeper API
  * Provides standardized MCP interface to Sleeper API middleware
- * Uses official StreamableHTTP transport for proper MCP compliance
+ * Implements MCP over HTTP for Claude Custom Connector
  */
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js'
-import { ListToolsRequestSchema, CallToolRequestSchema, ListResourcesRequestSchema, ReadResourceRequestSchema } from '@modelcontextprotocol/sdk/types.js'
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import express from 'express'
 import cors from 'cors'
 import axios from 'axios'
 import NodeCache from 'node-cache'
-import { randomUUID } from 'crypto'
 import { MCP_TOOLS, createToolHandlers } from './tools.js'
 
 const app = express()
@@ -23,7 +19,6 @@ const CONFIG = {
   API_BASE_URL: process.env.API_BASE_URL || 'http://sleeper-api:3000',
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
   HTTP_PORT: parseInt(process.env.HTTP_PORT) || 3001,
-  MCP_PORT: parseInt(process.env.MCP_PORT) || 3002,
   CORS_ORIGINS: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : '*',
   NODE_ENV: process.env.NODE_ENV || 'development',
   CACHE_TTL: parseInt(process.env.CACHE_TTL) || 600, // 10 minutes
@@ -42,10 +37,6 @@ function validateConfig() {
     errors.push('HTTP_PORT must be between 1 and 65535')
   }
   
-  if (CONFIG.MCP_PORT < 1 || CONFIG.MCP_PORT > 65535) {
-    errors.push('MCP_PORT must be between 1 and 65535')
-  }
-  
   if (errors.length > 0) {
     log('error', 'Configuration validation failed', { errors })
     process.exit(1)
@@ -54,7 +45,6 @@ function validateConfig() {
   log('info', 'Configuration validated successfully', {
     apiBaseUrl: CONFIG.API_BASE_URL,
     httpPort: CONFIG.HTTP_PORT,
-    mcpPort: CONFIG.MCP_PORT,
     nodeEnv: CONFIG.NODE_ENV
   })
 }
@@ -237,21 +227,6 @@ async function callSleeperAPI(endpoint, method = 'GET', data = null, apiKey = nu
 // Create tool handlers with the callSleeperAPI function
 const toolHandlers = createToolHandlers(callSleeperAPI)
 
-// Initialize MCP server with proper capabilities
-const mcpServer = new Server(
-  {
-    name: 'sleeper-api-mcp',
-    version: '1.0.0',
-  },
-  {
-    capabilities: {
-      tools: {
-        listChanged: true  // Support for tools/list_changed notifications
-      },
-      resources: {}
-    },
-  }
-)
 
 // Unified tool execution function
 async function executeTool(toolName, args) {
@@ -280,77 +255,6 @@ async function executeTool(toolName, args) {
   return result
 }
 
-// Set up MCP request handlers
-mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
-  log('info', 'Listing MCP tools', { count: MCP_TOOLS.length })
-  return {
-    tools: MCP_TOOLS
-  }
-})
-
-mcpServer.setRequestHandler(ListResourcesRequestSchema, async () => {
-  return {
-    resources: []
-  }
-})
-
-mcpServer.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  throw new Error('No resources available')
-})
-
-mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params
-  
-  log('info', `MCP tool called: ${name}`, { 
-    arguments: Object.keys(args || {}),
-    tool: name
-  })
-
-  try {
-    const result = await executeTool(name, args)
-    
-    const response = {
-      content: [{
-        type: 'text',
-        text: JSON.stringify({
-          data: result.data,
-          metadata: {
-            timestamp: new Date().toISOString(),
-            success: true,
-            tool: name,
-            cached: result.cached
-          }
-        }, null, 2)
-      }],
-      isError: false
-    }
-
-    log('info', `MCP tool completed: ${name}`, { 
-      success: true,
-      cached: result.cached 
-    })
-    
-    return response
-
-  } catch (error) {
-    log('error', `MCP tool failed: ${name}`, { error: error.message })
-    
-    // Return standardized JSON-RPC 2.0 error format with API error details
-    const apiError = error.response?.data
-    const statusCode = error.response?.status
-    
-    throw {
-      code: -32603,
-      message: statusCode ? `Request failed with status code ${statusCode}` : error.message,
-      data: {
-        tool: name,
-        timestamp: new Date().toISOString(),
-        status: statusCode,
-        message: apiError?.message || apiError || 'API request failed'
-      }
-    }
-  }
-})
 
 // Enhanced health check endpoint
 app.get('/mcp/health', async (req, res) => {
@@ -362,8 +266,7 @@ app.get('/mcp/health', async (req, res) => {
     config: {
       apiBaseUrl: CONFIG.API_BASE_URL,
       nodeEnv: CONFIG.NODE_ENV,
-      httpPort: CONFIG.HTTP_PORT,
-      mcpPort: CONFIG.MCP_PORT
+      httpPort: CONFIG.HTTP_PORT
     },
     cache: {
       keys: cache.keys().length,
@@ -574,7 +477,13 @@ app.post('/mcp', async (req, res) => {
         })
         break
         
-      default:
+      case 'notifications/initialized':
+        log('info', 'MCP notifications/initialized received')
+        // Notifications don't require a response, just acknowledge
+        res.status(200).end()
+        break
+
+        default:
         log('warn', `Unknown MCP method: ${method}`)
         res.json({
           jsonrpc: '2.0',
@@ -666,17 +575,6 @@ const httpServer = app.listen(CONFIG.HTTP_PORT, () => {
   })
 })
 
-// Function to send tool list changed notifications
-function notifyToolsChanged() {
-  try {
-    mcpServer.notification({
-      method: 'notifications/tools/list_changed'
-    })
-    log('info', 'Sent tools/list_changed notification')
-  } catch (error) {
-    log('error', 'Failed to send tools notification', { error: error.message })
-  }
-}
 
 // Graceful shutdown
 function gracefulShutdown(signal) {

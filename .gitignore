@@ -155,3 +155,4 @@ docker-data/
 ehthumbs.db
 Thumbs.db
 package-lock.json
+mcp/server.js.backup
