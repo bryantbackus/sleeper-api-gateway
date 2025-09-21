@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 /**
  * MCP Server for Sleeper API
  * Provides standardized MCP interface to Sleeper API middleware
@@ -479,20 +477,19 @@ app.post('/mcp', async (req, res) => {
 
       case 'notifications/initialized':
         log('info', 'MCP notifications/initialized received')
-        // Return empty JSON object for notifications
-        res.json({})
+        res.status(204).end()
         break
 
-        default:
-        log('warn', `Unknown MCP method: ${method}`)
-        res.json({
-          jsonrpc: '2.0',
-          id,
-          error: {
-            code: -32601,
-            message: `Method not found: ${method}`
-          }
-        })
+      default:
+      log('warn', `Unknown MCP method: ${method}`)
+      res.json({
+        jsonrpc: '2.0',
+        id,
+        error: {
+          code: -32601,
+          message: `Method not found: ${method}`
+        }
+      })
     }
     
   } catch (error) {
