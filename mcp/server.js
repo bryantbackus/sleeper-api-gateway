@@ -476,11 +476,11 @@ app.post('/mcp', async (req, res) => {
           }
         })
         break
-        
+
       case 'notifications/initialized':
         log('info', 'MCP notifications/initialized received')
-        // Notifications don't require a response, just acknowledge
-        res.status(200).end()
+        // Return empty JSON object for notifications
+        res.json({})
         break
 
         default:
