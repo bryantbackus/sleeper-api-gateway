@@ -41,7 +41,14 @@ function log(level, message, data = {}) {
       const cached = cache.get(cacheKey)
       if (cached) {
         log('debug', 'Cache hit', { endpoint, cacheKey })
-        return { success: true, data: cached, cached: true }
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify(cached, null, 2)
+          }],
+          success: true,
+          cached: true
+        }
       }
     }
     
@@ -75,8 +82,11 @@ function log(level, message, data = {}) {
       }
       
       return {
+        content: [{
+          type: 'text',
+          text: JSON.stringify(response.data, null, 2)
+        }],
         success: true,
-        data: response.data,
         cached: false
       }
     } catch (error) {
