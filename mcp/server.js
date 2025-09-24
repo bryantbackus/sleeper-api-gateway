@@ -17,8 +17,9 @@ import { CONFIG } from './config.js'
 import { cache, log, TRANSPORTS, USER_SESSIONS, TOOL_HANDLES } from './shared_utils.js'
 
 // ### MCP Tools ###
-import { registerAuthTool } from './authenticate-api.js'
+import { registerAuthTool, registerAuthToolNoToolRegistration } from './authenticate-api.js'
 import { registerNoAuthTools } from './tools-no-auth.js'
+import { registerAuthenticatedTools } from './tools-auth.js'
 
 // ### Server Imports ###
 import cors from 'cors'
@@ -89,10 +90,13 @@ app.post('/mcp', async (req, res) => {
 
     // ... set up server resources, tools, and prompts ...
     // Register auth tool
-    registerAuthTool(server, sessionId)
+    registerAuthToolNoToolRegistration(server, sessionId)
 
     // Register no auth tools
     registerNoAuthTools(server, sessionId)
+
+    // Register authenticated tools
+    registerAuthenticatedTools(server, sessionId)
 
     // Connect to the MCP server
     await server.connect(transport);
