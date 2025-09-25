@@ -13,7 +13,7 @@ function registerTool(server, tool_config) {
 
 // Tools that require authentication (use requireAPIKey middleware)
 const MCP_TOOLS_AUTH = {
-  get_user_info: {
+  get_user_info_requires_auth: {
     config: {
       title: 'Get User Info',
       description: 'Get information about a Sleeper user',
@@ -28,7 +28,7 @@ const MCP_TOOLS_AUTH = {
     }
   },
 
-  get_user_leagues: {
+  get_user_leagues_requires_auth: {
     config: {
       title: 'Get User Leagues',
       description: 'Get fantasy football leagues for a specific user',
@@ -54,7 +54,7 @@ const MCP_TOOLS_AUTH = {
     }
   },
 
-  get_my_leagues: {
+  get_my_leagues_requires_auth: {
     config: {
       title: 'Get My Leagues',
       description: 'Get fantasy football leagues for the authenticated user',
@@ -76,7 +76,7 @@ const MCP_TOOLS_AUTH = {
     }
   },
 
-  get_league_info: {
+  get_league_info_requires_auth: {
     config: {
       title: 'Get League Info',
       description: 'Get detailed information about a specific league',
@@ -92,7 +92,7 @@ const MCP_TOOLS_AUTH = {
     }
   },
 
-  get_league_rosters: {
+  get_league_rosters_requires_auth: {
     config: {
       title: 'Get League Rosters',
       description: 'Get all rosters for a specific league',
@@ -108,7 +108,7 @@ const MCP_TOOLS_AUTH = {
     }
   },
 
-  get_league_users: {
+  get_league_users_requires_auth: {
     config: {
       title: 'Get League Users',
       description: 'Get all users in a specific league',
@@ -124,7 +124,7 @@ const MCP_TOOLS_AUTH = {
     }
   },
 
-  get_league_matchups: {
+  get_league_matchups_requires_auth: {
     config: {
       title: 'Get League Matchups',
       description: 'Get matchups for a specific league and week',
@@ -145,7 +145,7 @@ const MCP_TOOLS_AUTH = {
     }
   },
 
-  get_league_winners_bracket: {
+  get_league_winners_bracket_requires_auth: {
     config: {
       title: 'Get League Winners Bracket',
       description: 'Get winners bracket for a specific league',
@@ -161,7 +161,7 @@ const MCP_TOOLS_AUTH = {
     }
   },
 
-  get_league_transactions: {
+  get_league_transactions_requires_auth: {
     config: {
       title: 'Get League Transactions',
       description: 'Get transactions for a specific league',
@@ -185,7 +185,7 @@ const MCP_TOOLS_AUTH = {
     }
   },
 
-  get_league_traded_picks: {
+  get_league_traded_picks_requires_auth: {
     config: {
       title: 'Get League Traded Picks',
       description: 'Get traded picks for a specific league',
@@ -201,7 +201,7 @@ const MCP_TOOLS_AUTH = {
     }
   },
 
-  get_league_drafts: {
+  get_league_drafts_requires_auth: {
     config: {
       title: 'Get League Drafts',
       description: 'Get drafts for a specific league',
@@ -216,7 +216,7 @@ const MCP_TOOLS_AUTH = {
     }
   },
 
-  get_draft_info: {
+  get_draft_info_requires_auth: {
     config: {
       title: 'Get Draft Info',
       description: 'Get detailed information about a specific draft',
@@ -232,7 +232,7 @@ const MCP_TOOLS_AUTH = {
     }
   },
 
-  get_draft_picks: {
+  get_draft_picks_requires_auth: {
     config: {
       title: 'Get Draft Picks',
       description: 'Get all picks for a specific draft',
@@ -248,7 +248,7 @@ const MCP_TOOLS_AUTH = {
     }
   },
 
-  get_draft_traded_picks: {
+  get_draft_traded_picks_requires_auth: {
     config: {
       title: 'Get Draft Traded Picks',
       description: 'Get traded picks for a specific draft',
@@ -264,7 +264,7 @@ const MCP_TOOLS_AUTH = {
     }
   },
 
-  get_my_profile: {
+  get_my_profile_requires_auth: {
     config: {
       title: 'Get My Profile',
       description: 'Get the authenticated user\'s profile information',
