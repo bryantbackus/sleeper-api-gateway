@@ -46,9 +46,9 @@ router.get('/health', async (req, res) => {
 // API information endpoint
 router.get('/', (req, res) => {
   res.json({
-    name: 'Sleeper API Middleware',
+    name: 'Sleeper API Gateway',
     version: '1.0.0',
-    description: 'API middleware server for Sleeper fantasy football API with caching and authentication',
+    description: 'API gateway for Sleeper fantasy football API with caching and authentication',
     documentation: {
       auth: '/auth - API key management and authentication',
       profile: '/profile - User profile management for multi-user support',
@@ -101,7 +101,7 @@ router.get('/', (req, res) => {
       }
     },
     support: {
-      repository: 'https://github.com/bryantbackus/sleeper-api-middleware',
+      repository: 'https://github.com/bryantbackus/sleeper-api-gateway',
       documentation: 'https://docs.sleeper.com/'
     }
   })
