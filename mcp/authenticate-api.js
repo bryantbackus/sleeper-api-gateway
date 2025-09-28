@@ -133,22 +133,23 @@ async function authenticate(apiKey, sessionId) {
     "/auth/validate",
     "GET",
     null,
-    apiKey
+    apiKey,
+    false,
+    true
   );
 
-  const success = !!profileResult.success;
+  const success = !!profileResult.valid;
   const message = success ? "Authentication successful" : "Invalid API key or unable to validate authentication";
 
   if (success) {
-    const responseData = JSON.parse(profileResult.content[0].text);
     USER_SESSIONS[sessionId] = {
       authenticated: true,
       apiKey: apiKey,
-      userId: responseData.userId||"User ID not set. Please Update."
+      userId: profileResult.userId||"User ID not set. Please Update."
     }
     
     log("info", "Authentication successful", {
-      userId: responseData.userId||"User ID not set."
+      userId: profileResult.userId||"User ID not set."
     });
   }
 
@@ -156,9 +157,8 @@ async function authenticate(apiKey, sessionId) {
     success,
     message,
     profile: success ? {
-      user_id: profileResult.data.user_id,
-      username: profileResult.data.sleeper_username,
-      display_name: profileResult.data.display_name,
+      userId: profileResult.userId,
+      description: profileResult.description
     } : null
   }
 }

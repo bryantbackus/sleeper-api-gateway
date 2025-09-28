@@ -33,7 +33,7 @@ function log(level, message, data = {}) {
   }
   
   // Call Sleeper API function
-  async function callSleeperAPI(endpoint, method = 'GET', data = null, apiKey = null, useCache = false) {
+  async function callSleeperAPI(endpoint, method = 'GET', data = null, apiKey = null, useCache = false, passThrouhResponse = false) {
     const cacheKey = `${method}:${endpoint}:${apiKey ? 'auth' : 'no-auth'}`
     
     // Check cache for GET requests
@@ -81,13 +81,17 @@ function log(level, message, data = {}) {
         log('debug', 'Response cached', { endpoint, cacheKey })
       }
       
-      return {
-        content: [{
-          type: 'text',
-          text: JSON.stringify(response.data, null, 2)
-        }],
-        success: true,
-        cached: false
+      if (passThrouhResponse) {
+        return response.data
+      } else {   
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify(response.data, null, 2)
+          }],
+          success: true,
+          cached: false
+        }
       }
     } catch (error) {
       log('error', 'API call failed', { 
