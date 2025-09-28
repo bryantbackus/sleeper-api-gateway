@@ -113,7 +113,7 @@ function registerAuthToolNoToolRegistration(server, sessionId) {
             type: 'text',
             text: JSON.stringify({
               ...result,
-              message: `${result.message} Tools registered.`
+              message: result.message
             }, null, 2)
           }]
         }
@@ -140,16 +140,15 @@ async function authenticate(apiKey, sessionId) {
   const message = success ? "Authentication successful" : "Invalid API key or unable to validate authentication";
 
   if (success) {
+    const responseData = JSON.parse(profileResult.content[0].text);
     USER_SESSIONS[sessionId] = {
       authenticated: true,
       apiKey: apiKey,
-      username: profileResult.data.sleeper_username,
-      userId: profileResult.data.user_id
+      userId: responseData.userId||"User ID not set. Please Update."
     }
     
     log("info", "Authentication successful", {
-      userId: profileResult.data.user_id,
-      username: profileResult.data.sleeper_username,
+      userId: responseData.userId||"User ID not set."
     });
   }
 
