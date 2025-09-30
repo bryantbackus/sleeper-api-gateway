@@ -34,7 +34,8 @@ services:
       - API_BASE_URL=http://sleeper-api:3000
       - HTTP_PORT=3001
       - MCP_PORT=3002
-      - LOG_LEVEL=${LOG_LEVEL:-debug}
+      - LOG_LEVEL=debug
+      # - LOG_LEVEL=${LOG_LEVEL:-debug}
       - CORS_ORIGINS=${CORS_ORIGINS:-*}
     networks:
       - sleeper_network
