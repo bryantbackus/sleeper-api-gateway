@@ -8,24 +8,6 @@ import { USER_SESSIONS } from './shared_utils.js'
 
 // Tools that don't require authentication (use optionalAPIKey middleware)
 const MCP_TOOLS_NO_AUTH = {
-  get_all_players: {
-    config: {
-      title: 'Get All NFL Players',
-      description: 'Get all NFL players (cached data)',
-      inputSchema: {
-        limit: z.number()
-          .min(1, { message: "Limit must be at least 1" })
-          .max(1000, { message: "Limit cannot exceed 1000" })
-          .optional()
-          .describe('Maximum number of players to return (default: 100)')
-      }
-    },
-    callback: async ({ limit }, apiKey = null) => {
-      const actualLimit = limit || 100
-      return await callSleeperAPI(`/players/nfl?limit=${actualLimit}`, 'GET', null, apiKey, true, false, 30000)
-    }
-  },
-
   get_trending_players: {
     config: {
       title: 'Get Trending Players',
