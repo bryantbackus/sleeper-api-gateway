@@ -24,6 +24,8 @@ import { registerAuthenticatedTools } from './tools-auth.js'
 // ### Server Imports ###
 import cors from 'cors'
 
+console.log('=== MCP SERVER STARTING ===')
+
 // ### Express App ###
 // Initialize Express app
 const app = express()
