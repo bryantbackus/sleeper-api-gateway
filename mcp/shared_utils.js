@@ -50,7 +50,7 @@ function log(level, message, data = {}) {
 }
   
   // Call Sleeper API function
-  async function callSleeperAPI(endpoint, method = 'GET', data = null, apiKey = null, useCache = false, passThrouhResponse = false) {
+  async function callSleeperAPI(endpoint, method = 'GET', data = null, apiKey = null, useCache = false, passThrouhResponse = false, timeout = CONFIG.REQUEST_TIMEOUT) {
     const cacheKey = `${method}:${endpoint}:${apiKey ? 'auth' : 'no-auth'}`
     
     // Check cache for GET requests
@@ -73,7 +73,7 @@ function log(level, message, data = {}) {
       const config = {
         method,
         url: `${CONFIG.API_BASE_URL}${endpoint}`,
-        timeout: CONFIG.REQUEST_TIMEOUT,
+        timeout: timeout,
         headers: {
           'Content-Type': 'application/json',
           'User-Agent': 'Sleeper-API-Middleware/1.0.0'

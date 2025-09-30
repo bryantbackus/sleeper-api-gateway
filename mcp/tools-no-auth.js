@@ -22,7 +22,7 @@ const MCP_TOOLS_NO_AUTH = {
     },
     callback: async ({ limit }, apiKey = null) => {
       const actualLimit = limit || 100
-      return await callSleeperAPI(`/players/nfl?limit=${actualLimit}`, 'GET', null, apiKey, true)
+      return await callSleeperAPI(`/players/nfl?limit=${actualLimit}`, 'GET', null, apiKey, true, false, 30000)
     }
   },
 
