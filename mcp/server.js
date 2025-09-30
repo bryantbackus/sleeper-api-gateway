@@ -27,7 +27,7 @@ import cors from 'cors'
 // ### Express App ###
 // Initialize Express app
 const app = express()
-app.use(express.json())
+app.use(express.json({limit: CONFIG.RESPONSE_LIMIT}))
 
 // Configure CORS
 app.use(cors({

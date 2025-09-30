@@ -74,6 +74,8 @@ function log(level, message, data = {}) {
         method,
         url: `${CONFIG.API_BASE_URL}${endpoint}`,
         timeout: timeout,
+        maxContentLength: CONFIG.RESPONSE_LIMIT * 1024 * 1024,
+        maxBodyLength: CONFIG.RESPONSE_LIMIT * 1024 * 1024,
         headers: {
           'Content-Type': 'application/json',
           'User-Agent': 'Sleeper-API-Middleware/1.0.0'

@@ -7,5 +7,6 @@ export const CONFIG = {
     CACHE_TTL: parseInt(process.env.CACHE_TTL) || 600,
     REQUEST_TIMEOUT: parseInt(process.env.REQUEST_TIMEOUT) || 10000,
     SESSION_TTL: parseInt(process.env.SESSION_TTL) || 86400, // 24 hours
-    ENABLE_DNS_REBINDING: process.env.NODE_ENV === 'production' ? false : true
+    ENABLE_DNS_REBINDING: process.env.NODE_ENV === 'production' ? false : true,
+    RESPONSE_LIMIT: parseInt(process.env.RESPONSE_LIMIT) || 15
   }
