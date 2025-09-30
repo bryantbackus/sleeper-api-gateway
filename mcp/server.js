@@ -149,7 +149,7 @@ app.get('/mcp/health', (req, res) => {
     },
     sessions: {
       active: Object.keys(TRANSPORTS).length,
-      authenticated: Object.values(userSessions).filter(s => s.authenticated).length
+      authenticated: Object.values(USER_SESSIONS).filter(s => s.authenticated).length
     }
   }
   res.json(stats)
