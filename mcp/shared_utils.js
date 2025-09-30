@@ -16,6 +16,23 @@ const cache = new NodeCache({ stdTTL: CONFIG.CACHE_TTL })
 
 // function to log messages
 function log(level, message, data = {}) {
+    // Define log level hierarchy
+    const logLevels = {
+        'error': 0,
+        'warn': 1,
+        'info': 2,
+        'debug': 3
+    }
+    
+    // Get current log level from config
+    const currentLogLevel = logLevels[CONFIG.LOG_LEVEL.toLowerCase()] || logLevels.debug
+    const messageLogLevel = logLevels[level.toLowerCase()] || logLevels.debug
+    
+    // Only log if message level is <= current log level
+    if (messageLogLevel > currentLogLevel) {
+        return
+    }
+    
     const timestamp = new Date().toISOString()
     const logData = {
       timestamp,
@@ -30,7 +47,7 @@ function log(level, message, data = {}) {
     }
     
     console.log(JSON.stringify(logData))
-  }
+}
   
   // Call Sleeper API function
   async function callSleeperAPI(endpoint, method = 'GET', data = null, apiKey = null, useCache = false, passThrouhResponse = false) {
