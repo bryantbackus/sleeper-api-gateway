@@ -133,7 +133,7 @@ const MCP_TOOLS_AUTH = {
           .min(1, { message: "League ID is required" })
           .regex(/^\d+$/, { message: "League ID must be numeric" })
           .describe('Sleeper league ID'),
-        week: z.number()
+        week: z.coerce.number()
           .int()
           .min(1, { message: "Week must be at least 1" })
           .max(18, { message: "Week cannot exceed 18" })
@@ -170,7 +170,7 @@ const MCP_TOOLS_AUTH = {
           .min(1, { message: "League ID is required" })
           .regex(/^\d+$/, { message: "League ID must be numeric" })
           .describe('Sleeper league ID'),
-        week: z.number()
+        week: z.coerce.number()
           .int()
           .min(1, { message: "Week must be at least 1" })
           .max(18, { message: "Week cannot exceed 18" })
@@ -325,6 +325,7 @@ const MCP_TOOLS_AUTH = {
 
 // Function to register all auth-required tools
 function registerAuthenticatedTools(server, sessionId) {
+  log('debug', 'Registering authenticated tools', { sessionId })
   Object.entries(MCP_TOOLS_AUTH).forEach(([toolName, toolConfig]) => {
     
     // Create a wrapper that injects API key from session

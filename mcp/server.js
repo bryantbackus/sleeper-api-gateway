@@ -24,7 +24,7 @@ import { registerAuthenticatedTools } from './tools-auth.js'
 // ### Server Imports ###
 import cors from 'cors'
 
-console.log('=== MCP SERVER STARTING ===')
+log('info', '=== MCP SERVER STARTING ===')
 
 // ### Express App ###
 // Initialize Express app
@@ -100,6 +100,8 @@ app.post('/mcp', async (req, res) => {
 
     // Register authenticated tools
     registerAuthenticatedTools(server, sessionId)
+
+    log('debug', 'Tools registration completed', { sessionId })
 
     // Connect to the MCP server
     await server.connect(transport);

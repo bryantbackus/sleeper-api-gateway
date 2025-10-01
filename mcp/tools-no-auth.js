@@ -16,12 +16,12 @@ const MCP_TOOLS_NO_AUTH = {
         type: z.enum(['add', 'drop'], {
           message: 'Type must be "add" or "drop"'
         }).describe('Trending type: "add" for most added, "drop" for most dropped'),
-        lookback_hours: z.number()
+        lookback_hours: z.coerce.number()
           .min(1, { message: "Lookback hours must be at least 1" })
           .max(168, { message: "Lookback hours cannot exceed 168" })
           .optional()
           .describe('Hours to look back for trending data (1-168)'),
-        limit: z.number()
+        limit: z.coerce.number()
           .min(1, { message: "Limit must be at least 1" })
           .max(100, { message: "Limit cannot exceed 100" })
           .optional()
@@ -45,7 +45,7 @@ const MCP_TOOLS_NO_AUTH = {
       description: 'Search for a specific NFL player by their Sleeper ID',
       inputSchema: {
         playerId: z.union([
-          z.number().int().positive().describe('Sleeper player ID as a number'),
+          z.coerce.number().int().positive().describe('Sleeper player ID as a number'),
           z.enum([
             'ARI','ATL','BAL','BUF','CAR','CHI','CIN','CLE','DAL','DEN','DET','GB',
             'HOU','IND','JAX','KC','LV','LAC','LAR','MIA','MIN','NE','NO','NYG','NYJ',
@@ -69,7 +69,7 @@ const MCP_TOOLS_NO_AUTH = {
         query: z.string()
           .min(1, { message: "Search query is required" })
           .describe('Search term (player name)'),
-        limit: z.number()
+        limit: z.coerce.number()
           .min(1, { message: "Limit must be at least 1" })
           .max(100, { message: "Limit cannot exceed 100" })
           .optional()
@@ -92,7 +92,7 @@ const MCP_TOOLS_NO_AUTH = {
         position: z.enum(['QB', 'RB', 'WR', 'TE', 'K', 'DEF'], {
           message: "Position must be a valid NFL position (e.g., QB, RB, WR, TE, K, DEF)"
         }).describe('Player position (QB, RB, WR, TE, K, DEF)'),
-        limit: z.number()
+        limit: z.coerce.number()
           .min(1, { message: "Limit must be at least 1" })
           .max(100, { message: "Limit cannot exceed 100" })
           .optional()
@@ -117,7 +117,7 @@ const MCP_TOOLS_NO_AUTH = {
         ], {
           message: "Team must be a valid NFL team abbreviation (e.g., KC, NE, GB)"
         }).describe('Team abbreviation (e.g., KC, NE, GB)'),
-        limit: z.number()
+        limit: z.coerce.number()
           .min(1, { message: "Limit must be at least 1" })
           .max(100, { message: "Limit cannot exceed 100" })
           .optional()
@@ -137,7 +137,7 @@ const MCP_TOOLS_NO_AUTH = {
       title: 'Get Active Players',
       description: 'Get only active NFL players',
       inputSchema: {
-        limit: z.number()
+        limit: z.coerce.number()
           .min(1, { message: "Limit must be at least 1" })
           .max(200, { message: "Limit cannot exceed 200" })
           .optional()
@@ -170,6 +170,7 @@ function registerTool(server, tool_config) {
 
 // Function to register all no-auth tools
 function registerNoAuthTools(server, sessionId = null) {
+  log('debug', 'Registering no-auth tools', { sessionId })
   Object.entries(MCP_TOOLS_NO_AUTH).forEach(([toolName, toolConfig]) => {
     // Create a wrapper that injects API key if session is authenticated
     const wrappedCallback = async (args) => {
