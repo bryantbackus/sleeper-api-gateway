@@ -20,7 +20,7 @@ router.get('/health', async (req, res) => {
       const cacheStatus = await cacheService.getCacheStatus()
       health.cache = {
         status: 'healthy',
-        lastRefresh: cacheStatus.lastRefresh,
+        lastRefresh: cacheStatus.lastRefresh ?? null,
         isRefreshing: cacheStatus.isRefreshing
       }
     } catch (error) {
