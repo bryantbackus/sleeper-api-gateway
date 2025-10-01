@@ -25,7 +25,11 @@ class CacheService {
     })
 
     // Refresh cache on startup if data is stale or missing
-    await this.checkAndRefreshIfNeeded()
+    try {
+      await this.checkAndRefreshIfNeeded()
+    } catch (error) {
+      logger.warn('Initial cache freshness check failed, continuing startup', error)
+    }
   }
 
   async checkAndRefreshIfNeeded() {
@@ -50,8 +54,18 @@ class CacheService {
       }
     } catch (error) {
       logger.error('Error checking cache freshness:', error)
-      // Try to refresh anyway
-      await this.refreshPlayerCache()
+      if (typeof setTimeout === 'function') {
+        setTimeout(() => {
+          this.refreshPlayerCache().catch((refreshError) => {
+            logger.error('Asynchronous cache refresh failed after check error:', refreshError)
+          })
+        }, 0)
+        logger.warn('Scheduled asynchronous cache refresh after check failure')
+      } else {
+        logger.warn('setTimeout unavailable; skipping automatic cache refresh after check failure')
+      }
+
+      throw error
     }
   }
 
@@ -96,15 +110,25 @@ class CacheService {
       )
       logger.info(`Cached ${trendingDrop.length} trending drop players`)
 
-      // Update last refresh time
+      // Update last refresh time metadata
+      const successTimestamp = new Date().toISOString()
       await database.run(
         'INSERT OR REPLACE INTO cache_metadata (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)',
-        ['last_refresh', new Date().toISOString()]
+        ['last_refresh', successTimestamp]
       )
 
       logger.info('Player cache refresh completed successfully')
     } catch (error) {
       logger.error('Error refreshing player cache:', error)
+      const failureTimestamp = new Date().toISOString()
+      try {
+        await database.run(
+          'INSERT OR REPLACE INTO cache_metadata (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)',
+          ['last_refresh_failure', failureTimestamp]
+        )
+      } catch (metadataError) {
+        logger.error('Failed to record cache refresh failure timestamp:', metadataError)
+      }
       throw error
     } finally {
       this.isRefreshing = false
@@ -161,7 +185,7 @@ class CacheService {
   async getLastRefreshTime() {
     try {
       const result = await database.get(
-        'SELECT value FROM cache_metadata WHERE key = ?', 
+        'SELECT value FROM cache_metadata WHERE key = ?',
         ['last_refresh']
       )
       return result ? result.value : null
@@ -171,29 +195,58 @@ class CacheService {
     }
   }
 
+  async getLastRefreshFailureTime() {
+    try {
+      const result = await database.get(
+        'SELECT value FROM cache_metadata WHERE key = ?',
+        ['last_refresh_failure']
+      )
+      return result ? result.value : null
+    } catch (error) {
+      logger.error('Error getting last refresh failure time:', error)
+      return null
+    }
+  }
+
   async getCacheStatus() {
     try {
-      const lastRefresh = await this.getLastRefreshTime()
+      const [lastRefresh, lastRefreshFailure] = await Promise.all([
+        this.getLastRefreshTime(),
+        this.getLastRefreshFailureTime()
+      ])
       const playersCount = await database.get(
-        'SELECT LENGTH(data) as size FROM players WHERE id = ?', 
+        'SELECT LENGTH(data) as size FROM players WHERE id = ?',
         ['all_players']
       )
       const trendingAddCount = await database.get(
-        'SELECT LENGTH(data) as size FROM trending_players WHERE id = ?', 
+        'SELECT LENGTH(data) as size FROM trending_players WHERE id = ?',
         ['trending_add']
       )
       const trendingDropCount = await database.get(
-        'SELECT LENGTH(data) as size FROM trending_players WHERE id = ?', 
+        'SELECT LENGTH(data) as size FROM trending_players WHERE id = ?',
         ['trending_drop']
+      )
+
+      const now = moment().tz(this.timezone)
+      const lastRefreshMoment = lastRefresh ? moment(lastRefresh).tz(this.timezone) : null
+      const minutesSinceLastSuccess = lastRefreshMoment ? now.diff(lastRefreshMoment, 'minutes') : null
+      const isStale = !lastRefreshMoment || now.diff(lastRefreshMoment, 'hours') >= 24
+      const lastFailureMoment = lastRefreshFailure ? moment(lastRefreshFailure).tz(this.timezone) : null
+      const failureMoreRecentThanSuccess = Boolean(
+        lastFailureMoment && (!lastRefreshMoment || lastFailureMoment.isAfter(lastRefreshMoment))
       )
 
       return {
         lastRefresh,
+        lastRefreshFailure,
         isRefreshing: this.isRefreshing,
         playersDataSize: playersCount?.size || 0,
         trendingAddDataSize: trendingAddCount?.size || 0,
         trendingDropDataSize: trendingDropCount?.size || 0,
-        nextRefreshTime: this.getNextRefreshTime()
+        nextRefreshTime: this.getNextRefreshTime(),
+        minutesSinceLastSuccess,
+        isStale,
+        failureMoreRecentThanSuccess
       }
     } catch (error) {
       logger.error('Error getting cache status:', error)
