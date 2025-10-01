@@ -2,7 +2,7 @@
  * MCP Tools for Sleeper API - Authentication Required
  * These tools require API keys to function
  */
-import { callSleeperAPI, log, USER_SESSIONS } from './shared_utils.js'
+import { callSleeperAPI, log, USER_SESSIONS, checkMcpRateLimit } from './shared_utils.js'
 import { z } from "zod";
 
 // ### HELPER FUNCTIONS ###
@@ -330,6 +330,27 @@ function registerAuthenticatedTools(server, sessionId) {
     
     // Create a wrapper that injects API key from session
     const wrappedCallback = async (args) => {
+      // Check rate limit
+      const rateLimit = checkMcpRateLimit(sessionId)
+
+      if (!rateLimit.allowed) {
+        const resetInSeconds = Math.ceil(rateLimit.resetIn / 1000)
+        return {
+          content: [{
+            type: 'text',
+            text: JSON.stringify({
+              error: 'Rate limit exceeded',
+              message: `You have exceeded the MCP rate limit. Please try again in ${resetInSeconds} seconds.`,
+              limit: rateLimit.limit,
+              resetIn: resetInSeconds
+            }, null, 2)
+          }],
+          success: false,
+          isError: true
+        }
+      }
+
+      // Get API key from session
       const session = USER_SESSIONS[sessionId]
       const apiKey = session.apiKey
       

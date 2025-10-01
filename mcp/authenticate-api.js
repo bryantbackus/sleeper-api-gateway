@@ -1,6 +1,6 @@
 import { callSleeperAPI, log } from './shared_utils.js'
 import { registerAuthenticatedTools } from './tools-auth.js'
-import { USER_SESSIONS, TOOL_HANDLES } from './shared_utils.js'
+import { USER_SESSIONS, TOOL_HANDLES, resetMcpRateLimit } from './shared_utils.js'
 import { z } from "zod";
 
 // ### HELPER FUNCTIONS ###
@@ -39,6 +39,9 @@ function registerAuthTool(server, sessionId) {
         const result = await authenticate(apiKey, sessionId)
         if (!result.success) {
           throw new Error(result.message)
+        } else {
+          // Reset rate limit to give authenticated user fresh start with higher limits
+          resetMcpRateLimit(sessionId)
         }
         
         registerAuthenticatedTools(server, sessionId)

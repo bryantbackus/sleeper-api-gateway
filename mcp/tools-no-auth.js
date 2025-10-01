@@ -4,7 +4,7 @@
  */
 import { callSleeperAPI, log } from './shared_utils.js'
 import { z } from "zod";
-import { USER_SESSIONS } from './shared_utils.js'
+import { USER_SESSIONS, checkMcpRateLimit } from './shared_utils.js'
 
 // Tools that don't require authentication (use optionalAPIKey middleware)
 const MCP_TOOLS_NO_AUTH = {
@@ -174,10 +174,36 @@ function registerNoAuthTools(server, sessionId = null) {
   Object.entries(MCP_TOOLS_NO_AUTH).forEach(([toolName, toolConfig]) => {
     // Create a wrapper that injects API key if session is authenticated
     const wrappedCallback = async (args) => {
-      let apiKey = null
+
       
       // If sessionId is provided, check if user is authenticated
       if (sessionId) {
+        if (sessionId) {
+          // Check rate limit
+          const rateLimit = checkMcpRateLimit(sessionId)
+          
+          if (!rateLimit.allowed) {
+            const resetInSeconds = Math.ceil(rateLimit.resetIn / 1000)
+            return {
+              content: [{
+                type: 'text',
+                text: JSON.stringify({
+                  error: 'Rate limit exceeded',
+                  message: `You have exceeded the MCP rate limit. Please try again in ${resetInSeconds} seconds.`,
+                  limit: rateLimit.limit,
+                  resetIn: resetInSeconds,
+                  suggestion: 'Authenticate with an API key for higher rate limits (50 → 200 requests/minute)'
+                }, null, 2)
+              }],
+              success: false,
+              isError: true
+            }
+          }
+        }
+
+        // Get API key from session
+        let apiKey = null
+
         const session = USER_SESSIONS[sessionId]
         if (session?.authenticated && session.apiKey) {
           apiKey = session.apiKey

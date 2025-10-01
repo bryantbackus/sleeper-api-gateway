@@ -18,27 +18,53 @@ const createAuthAwareRateLimit = (options = {}) => {
     name = 'auth-aware'
   } = options
 
+  // Helper function to check if request is from internal/local network
+  const isInternalRequest = (req) => {
+    const ip = req.ip || req.connection.remoteAddress
+    // Check for localhost, Docker internal networks, and private IPs
+    return ip === '127.0.0.1' || 
+           ip === '::1' || 
+           ip === 'localhost' ||
+           ip?.startsWith('172.')  // Docker default network
+  }
+
   return rateLimit({
     windowMs,
     max: (req) => {
+      // Internal requests get very high limits (even when unauthenticated)
+      if (isInternalRequest(req) && !req.user) {
+        return authenticatedMax * 3 // Triple the authenticated limit for internal
+      }
+      
       const limit = req.user ? authenticatedMax : unauthenticatedMax
       logger.debug(`Rate limit check for ${name}:`, {
         authenticated: !!req.user,
         userId: req.user?.id,
         ip: req.ip,
         path: req.path,
-        limit
+        limit,
+        isInternal: isInternalRequest(req)
       })
       return limit
     },
     keyGenerator: (req) => {
-      // Use user ID for authenticated users, IP for unauthenticated
-      const key = req.user ? `user_${req.user.id}` : `ip_${req.ip}`
-      return `${name}_${key}`
+      // Use user ID for authenticated users
+      if (req.user) {
+        return `${name}_user_${req.user.id}`
+      }
+      
+      // For internal requests, use a special key to separate from public traffic
+      if (isInternalRequest(req)) {
+        return `${name}_internal_${req.ip}`
+      }
+      
+      // Public unauthenticated requests
+      return `${name}_ip_${req.ip}`
     },
     message: (req) => {
       const isAuth = !!req.user
-      const limit = isAuth ? authenticatedMax : unauthenticatedMax
+      const isInternal = isInternalRequest(req)
+      const limit = isInternal && !isAuth ? authenticatedMax * 2 : (isAuth ? authenticatedMax : unauthenticatedMax)
       const windowMinutes = Math.round(windowMs / 60000)
       
       return {
@@ -59,7 +85,8 @@ const createAuthAwareRateLimit = (options = {}) => {
     legacyHeaders: false,
     handler: (req, res) => {
       const isAuth = !!req.user
-      const limit = isAuth ? authenticatedMax : unauthenticatedMax
+      const isInternal = isInternalRequest(req)
+      const limit = isInternal && !isAuth ? authenticatedMax * 2 : (isAuth ? authenticatedMax : unauthenticatedMax)
       
       logger.warn(`${name} rate limit exceeded:`, {
         authenticated: isAuth,
@@ -68,7 +95,8 @@ const createAuthAwareRateLimit = (options = {}) => {
         userAgent: req.get('User-Agent'),
         path: req.path,
         limit,
-        windowMs
+        windowMs,
+        isInternal
       })
 
       const windowMinutes = Math.round(windowMs / 60000)

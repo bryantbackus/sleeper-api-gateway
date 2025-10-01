@@ -11,6 +11,8 @@ const USER_SESSIONS = {}
 // shared_utils.js
 export const TOOL_HANDLES = {} // { [sessionId]: { [toolName]: handle } }
 
+export const SESSION_RATE_LIMITS = {} // { [sessionId]: { count: 0, windowStart: timestamp } }
+
 // Initialize caches
 const cache = new NodeCache({ stdTTL: CONFIG.CACHE_TTL })
 
@@ -124,4 +126,82 @@ function log(level, message, data = {}) {
     }
   }
 
-  export { cache, log, callSleeperAPI, TRANSPORTS, USER_SESSIONS }
+  /**
+ * Check if a session has exceeded its rate limit
+ * @param {string} sessionId - The session ID to check
+ * @returns {Object} { allowed: boolean, remaining: number, resetIn?: number }
+ */
+function checkMcpRateLimit(sessionId) {
+  const now = Date.now()
+  const session = USER_SESSIONS[sessionId]
+  const isAuthenticated = session?.authenticated || false
+  
+  // Determine limits based on authentication status
+  const maxRequests = isAuthenticated 
+    ? CONFIG.MCP_AUTHENTICATED_LIMIT 
+    : CONFIG.MCP_UNAUTHENTICATED_LIMIT
+  const windowMs = CONFIG.MCP_RATE_LIMIT_WINDOW
+  
+  // Initialize rate limit tracking for new sessions
+  if (!SESSION_RATE_LIMITS[sessionId]) {
+    SESSION_RATE_LIMITS[sessionId] = {
+      count: 1,
+      windowStart: now
+    }
+    return { 
+      allowed: true, 
+      remaining: maxRequests - 1,
+      limit: maxRequests
+    }
+  }
+  
+  const limitData = SESSION_RATE_LIMITS[sessionId]
+  
+  // Reset window if expired
+  if (now - limitData.windowStart > windowMs) {
+    limitData.count = 1
+    limitData.windowStart = now
+    return { 
+      allowed: true, 
+      remaining: maxRequests - 1,
+      limit: maxRequests
+    }
+  }
+  
+  // Check if over limit
+  if (limitData.count >= maxRequests) {
+    const resetIn = windowMs - (now - limitData.windowStart)
+    log('warn', 'MCP rate limit exceeded', {
+      sessionId,
+      authenticated: isAuthenticated,
+      count: limitData.count,
+      limit: maxRequests,
+      resetIn
+    })
+    return { 
+      allowed: false, 
+      remaining: 0,
+      limit: maxRequests,
+      resetIn
+    }
+  }
+  
+  // Increment count
+  limitData.count++
+  return { 
+    allowed: true, 
+    remaining: maxRequests - limitData.count,
+    limit: maxRequests
+  }
+}
+
+/**
+ * Reset rate limit for a session (e.g., after successful authentication)
+ * @param {string} sessionId - The session ID to reset
+ */
+function resetMcpRateLimit(sessionId) {
+  delete SESSION_RATE_LIMITS[sessionId]
+  log('info', 'MCP rate limit reset', { sessionId })
+}
+
+  export { cache, log, callSleeperAPI, checkMcpRateLimit, resetMcpRateLimit, TRANSPORTS, USER_SESSIONS }
