@@ -228,15 +228,19 @@ POST /players/cache/refresh
 The middleware includes intelligent caching to minimize API calls and improve performance:
 
 #### **Cache Management Commands**
+> ⚠️ Cache administration endpoints require the `X-Master-Key` header. Patterns containing advanced regular expressions are only accepted when the master key is provided.
 ```bash
 # Check cache statistics
-curl http://localhost:3000/cache/stats
+curl -H "X-Master-Key: YOUR_MASTER_KEY" \
+  http://localhost:3000/cache/stats
 
 # Clear all cache
-curl -X POST http://localhost:3000/cache/clear
+curl -H "X-Master-Key: YOUR_MASTER_KEY" \
+  -X POST http://localhost:3000/cache/clear
 
 # Clear specific cache pattern
-curl -X POST "http://localhost:3000/cache/clear?pattern=players"
+curl -H "X-Master-Key: YOUR_MASTER_KEY" \
+  -X POST "http://localhost:3000/cache/clear?pattern=players"
 
 # View cache headers in responses
 curl -I -H "X-API-Key: YOUR_KEY" \
@@ -614,8 +618,10 @@ const players = await api.get('/players/search/name?q=mahomes')
 // Get trending players
 const trending = await api.get('/players/nfl/trending/add')
 
-// Check cache statistics
-const cacheStats = await api.get('/cache/stats')
+// Check cache statistics (requires master key)
+const cacheStats = await api.get('/cache/stats', {
+  headers: { 'X-Master-Key': 'YOUR_MASTER_KEY_HERE' }
+})
 ```
 
 ### Python
@@ -672,10 +678,12 @@ all_players = response.json()
 4. **Cache Not Updating**
    ```bash
    # Check cache status
-   curl http://localhost:3000/cache/stats
-   
+   curl -H "X-Master-Key: YOUR_MASTER_KEY" \
+     http://localhost:3000/cache/stats
+
    # Force cache refresh
-   curl -X POST http://localhost:3000/cache/clear
+   curl -H "X-Master-Key: YOUR_MASTER_KEY" \
+     -X POST http://localhost:3000/cache/clear
    ```
 
 5. **Database Issues**
