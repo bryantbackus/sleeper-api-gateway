@@ -327,7 +327,8 @@ const MCP_TOOLS_AUTH = {
 function registerAuthenticatedTools(server, sessionId) {
   log('debug', 'Registering authenticated tools', { sessionId })
   Object.entries(MCP_TOOLS_AUTH).forEach(([toolName, toolConfig]) => {
-    
+    let apiKey = null
+
     // Create a wrapper that injects API key from session
     const wrappedCallback = async (args) => {
       // Check rate limit
@@ -352,7 +353,9 @@ function registerAuthenticatedTools(server, sessionId) {
 
       // Get API key from session
       const session = USER_SESSIONS[sessionId]
-      const apiKey = session.apiKey
+      if (session?.authenticated && session.apiKey) {
+        apiKey = session.apiKey
+      }
       
       // Call original callback with API key
       return await toolConfig.callback(args, apiKey)
