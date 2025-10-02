@@ -1,5 +1,22 @@
 const logger = require('../config/logger')
 
+const MAX_PATTERN_LENGTH = 256
+const SAFE_PATTERN_REGEX = /^[A-Za-z0-9_:\-\/.,*{}[\]()"'\s-]+$/
+
+const hasValidMasterKey = (req) => {
+  const providedKey = req.headers['x-master-key'] || (req.query && req.query.master_key)
+  const expectedKey = process.env.MASTER_KEY
+
+  return Boolean(expectedKey && providedKey && providedKey === expectedKey)
+}
+
+const isSafePattern = (pattern) => {
+  return typeof pattern === 'string' &&
+    pattern.length > 0 &&
+    pattern.length <= MAX_PATTERN_LENGTH &&
+    SAFE_PATTERN_REGEX.test(pattern)
+}
+
 class RequestCache {
   constructor() {
     this.cache = new Map()
@@ -171,10 +188,20 @@ class RequestCache {
     }
 
     let cleared = 0
-    const isMatch =
-      pattern instanceof RegExp
-        ? (key) => pattern.test(key)
-        : (key) => key.includes(String(pattern))
+    let regex
+
+    try {
+      regex = new RegExp(pattern)
+    } catch (error) {
+      logger.warn('Invalid cache clear pattern rejected:', {
+        pattern,
+        error: error.message
+      })
+      const invalidPatternError = new Error('Invalid cache pattern')
+      invalidPatternError.code = 'INVALID_PATTERN'
+      throw invalidPatternError
+    }
+
 
     for (const key of this.cache.keys()) {
       if (isMatch(key)) {
@@ -275,17 +302,49 @@ const cacheStats = (req, res) => {
 
 const clearCache = (req, res) => {
   const pattern = req.query.pattern
-  
+
   if (pattern) {
-    const cleared = requestCache.clearByPattern(pattern)
-    res.json({
-      success: true,
-      message: `Cache cleared by pattern: ${pattern}`,
-      entriesRemoved: cleared
-    })
+    const masterKeyProvided = hasValidMasterKey(req)
+
+    if (!isSafePattern(pattern) && !masterKeyProvided) {
+      logger.warn('Rejected unsafe cache clear pattern without master key:', {
+        patternPreview: pattern.substring(0, 64),
+        ip: req.ip
+      })
+
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid pattern',
+        message: 'Cache clear pattern contains invalid characters or is too long. Provide a master key for advanced patterns.'
+      })
+    }
+
+    try {
+      const cleared = requestCache.clearByPattern(pattern)
+      return res.json({
+        success: true,
+        message: `Cache cleared by pattern: ${pattern}`,
+        entriesRemoved: cleared
+      })
+    } catch (error) {
+      if (error.code === 'INVALID_PATTERN') {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid pattern',
+          message: 'The provided cache clear pattern is not a valid regular expression.'
+        })
+      }
+
+      logger.error('Unexpected error clearing cache by pattern:', error)
+      return res.status(500).json({
+        success: false,
+        error: 'Cache clear failed',
+        message: 'An unexpected error occurred while clearing the cache.'
+      })
+    }
   } else {
     requestCache.clear()
-    res.json({
+    return res.json({
       success: true,
       message: 'All cache cleared successfully'
     })
