@@ -5,6 +5,7 @@ const cacheService = require('../services/cacheService')
 const router = express.Router()
 
 // Health check endpoint
+// Health check endpoint
 router.get('/health', async (req, res) => {
   try {
     const cacheInfo = {
@@ -37,10 +38,12 @@ router.get('/health', async (req, res) => {
 
       if (cacheStatus.isStale || cacheStatus.failureMoreRecentThanSuccess) {
         cacheHealth.status = cacheStatus.isStale ? 'stale' : 'degraded'
-        health.status = 'degraded'
+        overallStatus = 'degraded' 
       }
 
-      health.cache = cacheHealth
+      cacheInfo.status = cacheHealth.status 
+      cacheInfo.lastRefresh = cacheHealth.lastSuccessfulRefresh
+      cacheInfo.isRefreshing = cacheHealth.isRefreshing
 
     } catch (error) {
       cacheInfo.status = 'unhealthy'

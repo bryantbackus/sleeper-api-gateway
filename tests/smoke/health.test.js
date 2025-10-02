@@ -101,7 +101,7 @@ describe('Smoke tests for core endpoints', () => {
     const response = await request(app).get('/sleeper/state/nfl')
 
     expect(response.status).toBe(200)
-    expect(response.body).toEqual(mockState)
+    expect(response.body).toEqual({ data: mockState })
     expect(sleeperService.getNFLState).toHaveBeenCalledTimes(1)
   })
 })
