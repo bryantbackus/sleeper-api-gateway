@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Install MCP dependencies
+        run: npm install --prefix mcp
+
       - name: Run linting
         run: npm run lint
 
