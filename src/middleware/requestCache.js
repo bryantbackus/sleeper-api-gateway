@@ -188,13 +188,22 @@ class RequestCache {
     }
 
     let cleared = 0
-    const isMatch =
-      pattern instanceof RegExp
-        ? (key) => pattern.test(key)
-        : (key) => key.includes(String(pattern))
+    let regex
+
+    try {
+      regex = new RegExp(pattern)
+    } catch (error) {
+      logger.warn('Invalid cache clear pattern rejected:', {
+        pattern,
+        error: error.message
+      })
+      const invalidPatternError = new Error('Invalid cache pattern')
+      invalidPatternError.code = 'INVALID_PATTERN'
+      throw invalidPatternError
+    }
 
     for (const key of this.cache.keys()) {
-      if (isMatch(key)) {
+      if (regex.test(key)) {
         this.cache.delete(key)
         cleared++
       }
