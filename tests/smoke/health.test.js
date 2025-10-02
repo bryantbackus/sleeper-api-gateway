@@ -59,13 +59,17 @@ describe('Smoke tests for core endpoints', () => {
   })
 
   test('GET /health returns health status with cache information', async () => {
+    // Set up the mock BEFORE making the request
     cacheService.getCacheStatus.mockResolvedValue({
       lastRefresh: '2024-01-01T00:00:00.000Z',
       isRefreshing: false,
       playersDataSize: 100,
       trendingAddDataSize: 10,
       trendingDropDataSize: 5,
-      nextRefreshTime: '2024-01-02T06:00:00.000Z'
+      nextRefreshTime: '2024-01-02T06:00:00.000Z',
+      minutesSinceLastSuccess: 0,
+      isStale: false,
+      failureMoreRecentThanSuccess: false
     })
 
     const response = await request(app).get('/health')
