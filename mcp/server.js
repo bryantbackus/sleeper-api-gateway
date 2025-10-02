@@ -17,7 +17,7 @@ import { CONFIG } from './config.js'
 import { cache, log, TRANSPORTS, USER_SESSIONS, TOOL_HANDLES } from './shared_utils.js'
 
 // ### MCP Tools ###
-import { registerAuthTool, registerAuthToolNoToolRegistration } from './authenticate-api.js'
+import { registerAuthToolNoToolRegistration } from './authenticate-api.js'
 import { registerNoAuthTools } from './tools-no-auth.js'
 import { registerAuthenticatedTools } from './tools-auth.js'
 
@@ -60,17 +60,39 @@ app.post('/mcp', async (req, res) => {
   } else if (!sessionId && isInitializeRequest(req.body)) {
     // New initialization request
     log('info', 'New MCP session initialization')
+    const server = new McpServer({
+      name: "example-server",
+      version: "1.0.0"
+    });
+
+    const newSessionId = randomUUID()
+
+    USER_SESSIONS[newSessionId] = {
+      authenticated: false,
+      apiKey: null,
+      username: null,
+      userId: null
+    }
+
+    registerAuthToolNoToolRegistration(server, newSessionId)
+    registerNoAuthTools(server, newSessionId)
+    registerAuthenticatedTools(server, newSessionId)
+
+    log('debug', 'Tools registration completed', { sessionId: newSessionId })
+
     transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => randomUUID(),
+      sessionIdGenerator: () => newSessionId,
       onsessioninitialized: (sessionId) => {
         // Store the transport by session ID
         TRANSPORTS[sessionId] = transport;
-        USER_SESSIONS[sessionId] = { 
+        USER_SESSIONS[sessionId] ||= {
           authenticated: false,
           apiKey: null,
           username: null,
           userId: null
-         }
+        }
+
+        log('debug', 'Session initialized', { sessionId })
       },
       // DNS rebinding protection
       enableDnsRebindingProtection: CONFIG.ENABLE_DNS_REBINDING,
@@ -86,22 +108,6 @@ app.post('/mcp', async (req, res) => {
         log('info', 'Session closed', { sessionId: transport.sessionId })
       }
     };
-    const server = new McpServer({
-      name: "example-server",
-      version: "1.0.0"
-    });
-
-    // ... set up server resources, tools, and prompts ...
-    // Register auth tool
-    registerAuthToolNoToolRegistration(server, sessionId)
-
-    // Register no auth tools
-    registerNoAuthTools(server, sessionId)
-
-    // Register authenticated tools
-    registerAuthenticatedTools(server, sessionId)
-
-    log('debug', 'Tools registration completed', { sessionId })
 
     // Connect to the MCP server
     await server.connect(transport);
@@ -216,20 +222,26 @@ process.on('SIGINT', () => {
 
 // ### Start Server ###
 // Start server
-app.listen(CONFIG.HTTP_PORT, '0.0.0.0', () => {
-  log('info', 'MCP server started', {
-    transport: 'StreamableHTTP',
-    port: CONFIG.HTTP_PORT,
-    endpoints: {
-      mcp: `http://0.0.0.0:${CONFIG.HTTP_PORT}/mcp`,
-      health: `http://0.0.0.0:${CONFIG.HTTP_PORT}/mcp/health`,
-      info: `http://0.0.0.0:${CONFIG.HTTP_PORT}/mcp/info`
-    },
-    protocolVersion: '2024-11-05',
-    authentication: 'Session-based with API key',
-    sessionTTL: CONFIG.SESSION_TTL,
-    environment: CONFIG.NODE_ENV,
-    tools: {
-    }
+let serverInstance = null
+
+if (process.env.NODE_ENV !== 'test') {
+  serverInstance = app.listen(CONFIG.HTTP_PORT, '0.0.0.0', () => {
+    log('info', 'MCP server started', {
+      transport: 'StreamableHTTP',
+      port: CONFIG.HTTP_PORT,
+      endpoints: {
+        mcp: `http://0.0.0.0:${CONFIG.HTTP_PORT}/mcp`,
+        health: `http://0.0.0.0:${CONFIG.HTTP_PORT}/mcp/health`,
+        info: `http://0.0.0.0:${CONFIG.HTTP_PORT}/mcp/info`
+      },
+      protocolVersion: '2024-11-05',
+      authentication: 'Session-based with API key',
+      sessionTTL: CONFIG.SESSION_TTL,
+      environment: CONFIG.NODE_ENV,
+      tools: {
+      }
+    })
   })
-})
+}
+
+export { app, serverInstance }

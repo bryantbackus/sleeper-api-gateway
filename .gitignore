@@ -23,7 +23,7 @@ coverage/
 # Keep generated results ignored but allow committed test sources
 tests/**
 !tests/automated/
-!tests/automated/jest.config.js
+!tests/automated/**/*.js
 !tests/smoke/
 !tests/smoke/**/*.js
 test-results/

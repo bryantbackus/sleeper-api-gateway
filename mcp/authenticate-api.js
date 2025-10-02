@@ -3,6 +3,12 @@ import { registerAuthenticatedTools } from './tools-auth.js'
 import { USER_SESSIONS, TOOL_HANDLES, resetMcpRateLimit } from './shared_utils.js'
 import { z } from "zod";
 
+function ensureSessionId(sessionId, context) {
+  if (!sessionId) {
+    throw new Error(`${context} requires a valid session ID`)
+  }
+}
+
 // ### HELPER FUNCTIONS ###
 // Helper Function to register a tool
 function registerTool(server, tool_config) {
@@ -21,6 +27,7 @@ function registerAuthTool(server, sessionId) {
    * Once the tools are authenticatedn, the authenticate tool is removed from the server.
    */
 
+  ensureSessionId(sessionId, 'registerAuthTool')
   log("info", "Registering authenticate tool", { sessionId })
   const tool_handle = registerTool(
     server,
@@ -84,6 +91,7 @@ function registerAuthToolNoToolRegistration(server, sessionId) {
    * Once the tools are authenticatedn, the authenticate tool is removed from the server.
    */
 
+  ensureSessionId(sessionId, 'registerAuthToolNoToolRegistration')
   log("info", "Registering authenticate tool", { sessionId })
   const tool_handle = registerTool(
     server,
@@ -129,8 +137,9 @@ function registerAuthToolNoToolRegistration(server, sessionId) {
   TOOL_HANDLES[sessionId] ||= {}
   TOOL_HANDLES[sessionId].authenticate = tool_handle
 }
-  
+
 async function authenticate(apiKey, sessionId) {
+  ensureSessionId(sessionId, 'authenticate')
   // Try to get user profile with the API key
   const profileResult = await callSleeperAPI(
     "/auth/validate",

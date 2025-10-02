@@ -11,6 +11,12 @@ function registerTool(server, tool_config) {
   server.registerTool(tool_config.name, tool_config.config, tool_config.callback)
 }
 
+function ensureSessionId(sessionId) {
+  if (!sessionId) {
+    throw new Error('registerAuthenticatedTools requires a valid session ID')
+  }
+}
+
 // Tools that require authentication (use requireAPIKey middleware)
 const MCP_TOOLS_AUTH = {
   get_user_info_requires_auth: {
@@ -325,6 +331,7 @@ const MCP_TOOLS_AUTH = {
 
 // Function to register all auth-required tools
 function registerAuthenticatedTools(server, sessionId) {
+  ensureSessionId(sessionId)
   log('debug', 'Registering authenticated tools', { sessionId })
   Object.entries(MCP_TOOLS_AUTH).forEach(([toolName, toolConfig]) => {
     let apiKey = null
