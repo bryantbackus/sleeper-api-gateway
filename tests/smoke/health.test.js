@@ -1,19 +1,18 @@
 const request = require('supertest')
 const express = require('express')
 
+// Mock the cacheService BEFORE importing any modules that use it
+const mockGetCacheStatus = jest.fn()
+jest.mock('../../src/services/cacheService', () => ({
+  getCacheStatus: mockGetCacheStatus
+}))
+
 jest.mock('../../src/config/logger', () => ({
   info: jest.fn(),
   warn: jest.fn(),
   error: jest.fn(),
   debug: jest.fn()
 }))
-
-jest.mock('../../src/services/cacheService', () => {
-  const mockGetCacheStatus = jest.fn()
-  return {
-    getCacheStatus: mockGetCacheStatus
-  }
-})
 
 jest.mock('../../src/services/sleeperService', () => ({
   getNFLState: jest.fn()
@@ -36,18 +35,14 @@ jest.mock('../../src/middleware/authAwareRateLimit', () => ({
   }
 }))
 
-jest.mock('../../src/middleware/userProfile', () => ({
-  loadUserProfile: (req, res, next) => {
-    req.userProfile = req.userProfile || {}
-    next()
-  },
-  getEffectiveSleeperUserId: () => null
+jest.mock('../../src/middleware/requestCache', () => ({
+  smartCache: (req, res, next) => next(),
+  cacheStats: (req, res, next) => next(),
+  clearCache: (req, res, next) => next()
 }))
 
 describe('Smoke tests for core endpoints', () => {
   let app
-  const cacheService = require('../../src/services/cacheService')
-  const sleeperService = require('../../src/services/sleeperService')
 
   beforeEach(() => {
     jest.clearAllMocks()
@@ -62,11 +57,8 @@ describe('Smoke tests for core endpoints', () => {
   })
 
   test('GET /health returns health status with cache information', async () => {
-    // Clear any previous calls
-    cacheService.getCacheStatus.mockClear()
-    
     // Set up the mock
-    cacheService.getCacheStatus.mockResolvedValue({
+    mockGetCacheStatus.mockResolvedValue({
       lastRefresh: '2024-01-01T00:00:00.000Z',
       isRefreshing: false,
       playersDataSize: 100,
@@ -82,7 +74,7 @@ describe('Smoke tests for core endpoints', () => {
 
     // Debug: log the actual response
     console.log('Response body:', JSON.stringify(response.body, null, 2))
-    console.log('Mock called:', cacheService.getCacheStatus.mock.calls.length)
+    console.log('Mock called:', mockGetCacheStatus.mock.calls.length)
 
     expect(response.status).toBe(200)
     expect(response.body).toMatchObject({
@@ -93,17 +85,23 @@ describe('Smoke tests for core endpoints', () => {
         isRefreshing: false
       }
     })
-    expect(cacheService.getCacheStatus).toHaveBeenCalledTimes(1)
+    expect(mockGetCacheStatus).toHaveBeenCalledTimes(1)
   })
 
   test('GET /sleeper/state/nfl proxies state from Sleeper service', async () => {
-    const statePayload = { week: 7, season: '2024', leagueSeason: '2024' }
-    sleeperService.getNFLState.mockResolvedValue(statePayload)
+    const mockState = {
+      season: '2024',
+      week: 1,
+      season_type: 'regular'
+    }
+
+    const sleeperService = require('../../src/services/sleeperService')
+    sleeperService.getNFLState.mockResolvedValue({ data: mockState })
 
     const response = await request(app).get('/sleeper/state/nfl')
 
     expect(response.status).toBe(200)
-    expect(response.body).toEqual(statePayload)
+    expect(response.body).toEqual(mockState)
     expect(sleeperService.getNFLState).toHaveBeenCalledTimes(1)
   })
 })
