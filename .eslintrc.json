@@ -1,0 +1,36 @@
+{
+  "root": true,
+  "extends": [
+    "standard"
+  ],
+  "env": {
+    "node": true,
+    "es2022": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2022
+  },
+  "overrides": [
+    {
+      "files": ["**/tests/**/*.js"],
+      "env": {
+        "jest": true
+      }
+    }
+  ],
+  "rules": {
+    "no-console": "off",
+    "space-before-function-paren": "off",
+    "comma-dangle": "off",
+    "quotes": "off",
+    "camelcase": "off",
+    "no-trailing-spaces": "off",
+    "padded-blocks": "off",
+    "prefer-const": "off",
+    "object-shorthand": "off",
+    "brace-style": "off",
+    "no-multiple-empty-lines": "off",
+    "no-useless-escape": "off",
+    "no-multi-spaces": "off"
+  }
+}

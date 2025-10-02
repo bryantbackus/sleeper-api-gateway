@@ -18,6 +18,7 @@ const indexRoutes = require('./routes/index')
 // Import middleware
 const { generalLimiter } = require('./middleware/rateLimiter')
 const { smartCache, cacheStats, clearCache } = require('./middleware/requestCache')
+const { requireMasterKey } = require('./middleware/simpleAuth')
 
 const app = express()
 const PORT = process.env.PORT || 3000
@@ -73,8 +74,8 @@ app.use((req, res, next) => {
 })
 
 // Cache management routes (before main routes)
-app.get('/cache/stats', cacheStats)
-app.post('/cache/clear', clearCache)
+app.get('/cache/stats', requireMasterKey, cacheStats)
+app.post('/cache/clear', requireMasterKey, clearCache)
 
 // Routes with caching
 app.use('/auth', authRoutes)
