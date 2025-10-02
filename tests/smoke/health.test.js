@@ -8,9 +8,12 @@ jest.mock('../../src/config/logger', () => ({
   debug: jest.fn()
 }))
 
-jest.mock('../../src/services/cacheService', () => ({
-  getCacheStatus: jest.fn()
-}))
+jest.mock('../../src/services/cacheService', () => {
+  const mockGetCacheStatus = jest.fn()
+  return {
+    getCacheStatus: mockGetCacheStatus
+  }
+})
 
 jest.mock('../../src/services/sleeperService', () => ({
   getNFLState: jest.fn()
@@ -59,7 +62,10 @@ describe('Smoke tests for core endpoints', () => {
   })
 
   test('GET /health returns health status with cache information', async () => {
-    // Set up the mock BEFORE making the request
+    // Clear any previous calls
+    cacheService.getCacheStatus.mockClear()
+    
+    // Set up the mock
     cacheService.getCacheStatus.mockResolvedValue({
       lastRefresh: '2024-01-01T00:00:00.000Z',
       isRefreshing: false,
@@ -73,6 +79,10 @@ describe('Smoke tests for core endpoints', () => {
     })
 
     const response = await request(app).get('/health')
+
+    // Debug: log the actual response
+    console.log('Response body:', JSON.stringify(response.body, null, 2))
+    console.log('Mock called:', cacheService.getCacheStatus.mock.calls.length)
 
     expect(response.status).toBe(200)
     expect(response.body).toMatchObject({
