@@ -137,11 +137,11 @@ async function buildDockerImages() {
   }
 }
 
-async function startDockerServices(config) {
+async function startDockerServices(_config) {
   console.log('\n🚀 Starting Docker services...')
   try {
     // Always start with basic services first (nginx will auto-detect SSL)
-    let composeCommand = 'docker-compose up -d'
+    const composeCommand = 'docker-compose up -d'
     console.log('🔄 Starting services with smart SSL detection')
     
     execSync(composeCommand, { stdio: 'inherit' })

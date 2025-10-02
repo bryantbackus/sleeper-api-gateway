@@ -183,7 +183,7 @@ async function main() {
     console.log('✅ Security keys generated')
 
     // Create .env file
-    const envFile = await createEnvFile(config)
+    await createEnvFile(config)
 
     // Generate first API key
     console.log('\n🗝️  Generating your first API key...')
