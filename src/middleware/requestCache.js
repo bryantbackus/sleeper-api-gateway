@@ -182,28 +182,44 @@ class RequestCache {
   // Clear cache by pattern
   clearByPattern(pattern) {
     let cleared = 0
-    let regex
-
-    try {
-      regex = new RegExp(pattern)
-    } catch (error) {
-      logger.warn('Invalid cache clear pattern rejected:', {
-        pattern,
-        error: error.message
-      })
-      const invalidPatternError = new Error('Invalid cache pattern')
-      invalidPatternError.code = 'INVALID_PATTERN'
-      throw invalidPatternError
-    }
-
-    for (const key of this.cache.keys()) {
-      if (regex.test(key)) {
-        this.cache.delete(key)
-        cleared++
-      }
+    
+    // Validate cache exists
+    if (!this.cache || typeof this.cache.keys !== 'function') {
+      logger.error('Cache not initialized or invalid')
+      throw new Error('Cache not available')
     }
     
-    logger.info('Cache cleared by pattern:', { pattern, entriesRemoved: cleared })
+    // Create flexible pattern matcher
+    const isMatch = pattern instanceof RegExp
+      ? (key) => pattern.test(key)
+      : (key) => key.includes(String(pattern))
+    
+    try {
+      for (const key of this.cache.keys()) {
+        try {
+          if (isMatch(key)) {
+            this.cache.delete(key)
+            cleared++
+          }
+        } catch (deleteError) {
+          logger.warn('Failed to delete cache key:', {
+            key,
+            error: deleteError.message
+          })
+          // Continue with other keys
+        }
+      }
+    } catch (iterationError) {
+      logger.error('Error iterating cache keys:', {
+        error: iterationError.message
+      })
+      throw new Error('Cache iteration failed')
+    }
+    
+    logger.info('Cache cleared by pattern:', { 
+      pattern: pattern.toString(), 
+      entriesRemoved: cleared 
+    })
     return cleared
   }
 
