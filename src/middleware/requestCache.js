@@ -164,17 +164,29 @@ class RequestCache {
 
   // Clear cache by pattern
   clearByPattern(pattern) {
+    if (!pattern) {
+      const removed = this.cache.size
+      this.clear()
+      return removed
+    }
+
     let cleared = 0
-    const regex = new RegExp(pattern)
-    
+    const matchesPattern =
+      pattern instanceof RegExp
+        ? (key) => pattern.test(key)
+        : (key) => key.includes(String(pattern))
+
     for (const key of this.cache.keys()) {
-      if (regex.test(key)) {
+      if (matchesPattern(key)) {
         this.cache.delete(key)
         cleared++
       }
     }
-    
-    logger.info('Cache cleared by pattern:', { pattern, entriesRemoved: cleared })
+
+    logger.info('Cache cleared by pattern:', {
+      pattern: pattern.toString(),
+      entriesRemoved: cleared
+    })
     return cleared
   }
 

@@ -7,31 +7,40 @@ const router = express.Router()
 // Health check endpoint
 router.get('/health', async (req, res) => {
   try {
-    // Basic health check
-    const health = {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development',
-      version: '1.0.0'
+    const cacheInfo = {
+      status: 'unknown',
+      lastRefresh: null,
+      isRefreshing: false
     }
 
-    // Try to get cache status to verify services are working
+    let overallStatus = 'healthy'
+
     try {
       const cacheStatus = await cacheService.getCacheStatus()
-      health.cache = {
-        status: 'healthy',
-        lastRefresh: cacheStatus.lastRefresh,
-        isRefreshing: cacheStatus.isRefreshing
-      }
+      cacheInfo.status = 'healthy'
+      cacheInfo.lastRefresh = cacheStatus.lastRefresh ?? null
+      cacheInfo.isRefreshing = Boolean(cacheStatus.isRefreshing)
     } catch (error) {
-      health.cache = {
-        status: 'unhealthy',
-        error: error.message
-      }
-      health.status = 'degraded'
+      cacheInfo.status = 'unhealthy'
+      cacheInfo.error = error.message
+      overallStatus = 'degraded'
     }
 
-    const statusCode = health.status === 'healthy' ? 200 : 503
+    const health = {
+      status: overallStatus,
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      version: '1.0.0',
+      cache: cacheInfo
+    }
+
+    const statusCodeMap = {
+      healthy: 200,
+      degraded: 200,
+      unhealthy: 503
+    }
+
+    const statusCode = statusCodeMap[health.status] ?? 503
     res.status(statusCode).json(health)
   } catch (error) {
     logger.error('Health check failed:', error)
