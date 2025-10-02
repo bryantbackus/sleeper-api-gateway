@@ -17,9 +17,31 @@ router.get('/health', async (req, res) => {
 
     try {
       const cacheStatus = await cacheService.getCacheStatus()
-      cacheInfo.status = 'healthy'
-      cacheInfo.lastRefresh = cacheStatus.lastRefresh ?? null
-      cacheInfo.isRefreshing = Boolean(cacheStatus.isRefreshing)
+      
+      const cacheHealth = {
+        status: 'healthy',
+        lastSuccessfulRefresh: cacheStatus.lastRefresh ?? null,
+        lastFailedRefresh: cacheStatus.lastRefreshFailure ?? null,
+        isRefreshing: cacheStatus.isRefreshing,
+        nextRefreshTime: cacheStatus.nextRefreshTime ?? null,
+        minutesSinceLastSuccess: cacheStatus.minutesSinceLastSuccess,
+        staleForMinutes: cacheStatus.isStale && typeof cacheStatus.minutesSinceLastSuccess === 'number'
+          ? cacheStatus.minutesSinceLastSuccess
+          : null,
+        isStale: cacheStatus.isStale,
+        failureMoreRecentThanSuccess: cacheStatus.failureMoreRecentThanSuccess,
+        playersDataSize: cacheStatus.playersDataSize,
+        trendingAddDataSize: cacheStatus.trendingAddDataSize,
+        trendingDropDataSize: cacheStatus.trendingDropDataSize
+      }
+
+      if (cacheStatus.isStale || cacheStatus.failureMoreRecentThanSuccess) {
+        cacheHealth.status = cacheStatus.isStale ? 'stale' : 'degraded'
+        health.status = 'degraded'
+      }
+
+      health.cache = cacheHealth
+
     } catch (error) {
       cacheInfo.status = 'unhealthy'
       cacheInfo.error = error.message
