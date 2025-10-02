@@ -6,25 +6,22 @@ module.exports = {
     jest: true
   },
   extends: [
-    'eslint:recommended'
+    'eslint:recommended',
+    'plugin:import/recommended'
   ],
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module'
   },
+  settings: {
+    'import/resolver': {
+      node: {
+        extensions: ['.js', '.cjs', '.mjs']
+      }
+    }
+  },
   rules: {
-    'no-trailing-spaces': 'off',
-    'space-before-function-paren': 'off',
-    'camelcase': 'off',
-    'quotes': 'off',
-    'comma-dangle': 'off',
-    'padded-blocks': 'off',
-    'brace-style': 'off',
-    'object-shorthand': 'off',
-    'no-multi-spaces': 'off',
-    'no-multiple-empty-lines': 'off',
-    'prefer-const': 'off',
-    'no-unused-vars': 'off',
-    'no-useless-escape': 'off'
+    'no-unused-vars': ['error', { argsIgnorePattern: '^_', ignoreRestSiblings: true }],
+    'prefer-const': 'error'
   }
 }

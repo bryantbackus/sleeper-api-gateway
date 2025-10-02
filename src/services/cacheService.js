@@ -257,7 +257,7 @@ class CacheService {
   getNextRefreshTime() {
     const now = moment().tz(this.timezone)
     const [hour, minute] = this.refreshTime.split(':')
-    let nextRefresh = moment().tz(this.timezone).hour(hour).minute(minute).second(0)
+    const nextRefresh = moment().tz(this.timezone).hour(hour).minute(minute).second(0)
     
     if (nextRefresh.isBefore(now)) {
       nextRefresh.add(1, 'day')

@@ -3,8 +3,3 @@ dist/
 coverage/
 logs/
 data/
-nginx/
-scripts/
-tests/
-Dockerfile
-Dockerfile.dev

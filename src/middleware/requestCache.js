@@ -1,7 +1,7 @@
 const logger = require('../config/logger')
 
 const MAX_PATTERN_LENGTH = 256
-const SAFE_PATTERN_REGEX = /^[A-Za-z0-9_:\-\/.,*{}[\]()"'\s-]+$/
+const SAFE_PATTERN_REGEX = new RegExp("^[A-Za-z0-9_:\\-/.,\"'*{}\\[\\]()\\s-]+$")
 
 const hasValidMasterKey = (req) => {
   const providedKey = req.headers['x-master-key'] || (req.query && req.query.master_key)
