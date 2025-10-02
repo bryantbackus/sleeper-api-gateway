@@ -137,12 +137,14 @@ typings/
 # TernJS port file
 .tern-port
 
-# Personal data cache
-data/cache/
-data/players.json
+# # Data
+data/**
 
 # Docker volumes
 docker-data/
+
+# SQL Lite files
+*.sqlite*
 
 # IDE files
 .vscode/

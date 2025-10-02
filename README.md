@@ -1,4 +1,4 @@
-# Sleeper API Middleware
+# Sleeper API Gateway
 
 A fast, secure, and intelligent API middleware server for the Sleeper fantasy football API. Features simple API key authentication, smart caching, automatic retries, and enhanced player search. Perfect for building AI-powered fantasy football analysis tools.
 
