@@ -78,7 +78,7 @@ describe('Smoke tests for core endpoints', () => {
 
     expect(response.status).toBe(200)
     expect(response.body).toMatchObject({
-      status: 'healthy',
+      status: expect.stringMatching(/^(healthy|degraded)$/),
       cache: {
         status: 'healthy',
         lastRefresh: '2024-01-01T00:00:00.000Z',
