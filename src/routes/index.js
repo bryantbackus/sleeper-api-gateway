@@ -5,7 +5,6 @@ const cacheService = require('../services/cacheService')
 const router = express.Router()
 
 // Health check endpoint
-// Health check endpoint
 router.get('/health', async (req, res) => {
   try {
     const cacheInfo = {

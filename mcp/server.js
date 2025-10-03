@@ -60,8 +60,9 @@ app.post('/mcp', async (req, res) => {
   } else if (!sessionId && isInitializeRequest(req.body)) {
     // New initialization request
     log('info', 'New MCP session initialization')
+    
     const server = new McpServer({
-      name: "example-server",
+      name: `sleeper-api-mcp-${CONFIG.NODE_ENV}`,
       version: "1.0.0"
     });
 
