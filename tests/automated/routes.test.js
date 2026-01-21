@@ -13,7 +13,7 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 const app = express()
 
 // Import middleware and routes
-const { generalLimiter, authLimiter, sleeperLimiter } = require('../../src/middleware/rateLimiter')
+const { generalLimiter } = require('../../src/middleware/rateLimiter')
 const { smartCache, cacheStats, clearCache } = require('../../src/middleware/requestCache')
 const authRoutes = require('../../src/routes/auth')
 const sleeperRoutes = require('../../src/routes/sleeper')

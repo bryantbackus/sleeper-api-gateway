@@ -3,3 +3,26 @@ dist/
 coverage/
 logs/
 data/
+
+# Shell scripts
+*.sh
+
+# Docker files
+Dockerfile
+docker-compose.yml
+*.template
+
+# MCP dependencies
+mcp/node_modules/
+
+# Postman collections
+*.postman_collection.json
+
+# Build artifacts
+build/
+.cache/
+.eslintcache
+
+# Environment files
+.env
+.env.*

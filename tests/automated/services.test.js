@@ -11,7 +11,6 @@ jest.mock('axios', () => ({
   }))
 }))
 
-const axios = require('axios')
 const sleeperService = require('../../src/services/sleeperService')
 const cacheService = require('../../src/services/cacheService')
 const playerSearchService = require('../../src/services/playerSearchService')

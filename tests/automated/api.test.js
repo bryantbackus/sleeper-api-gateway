@@ -273,7 +273,7 @@ describe('Sleeper API Middleware Tests', () => {
     })
 
     test('GET /sleeper/user/:identifier should require authentication', async () => {
-      const response = await request(app)
+      await request(app)
         .get('/sleeper/user/test-user')
         .set('X-API-Key', apiKey)
         .expect(200)
@@ -345,7 +345,7 @@ describe('Sleeper API Middleware Tests', () => {
     })
 
     test('Invalid JSON should return 400', async () => {
-      const response = await request(app)
+      await request(app)
         .post('/auth/create-key')
         .set('X-Master-Key', masterKey)
         .set('Content-Type', 'application/json')

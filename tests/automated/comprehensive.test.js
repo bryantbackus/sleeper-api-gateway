@@ -516,13 +516,13 @@ describe('Comprehensive Test Coverage', () => {
 
   describe('HTTP Methods and Headers', () => {
     test('should reject unsupported HTTP methods', async () => {
-      const response = await request(app)
+      await request(app)
         .patch('/health')
         .expect(404)
     })
 
     test('should handle CORS preflight requests', async () => {
-      const response = await request(app)
+      await request(app)
         .options('/health')
         .expect(204)
     })
