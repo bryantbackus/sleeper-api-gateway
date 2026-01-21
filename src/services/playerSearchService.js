@@ -41,6 +41,46 @@ class PlayerSearchService {
     }
   }
 
+  /**
+   * Search multiple players by their IDs in a single batch operation
+   * This is more efficient than calling searchPlayerById multiple times
+   * because it only accesses the cache once.
+   * 
+   * @param {string[]} playerIds - Array of player IDs to search
+   * @returns {Array} Array of player objects or "Not Found" for missing IDs
+   */
+  async searchPlayersByIds(playerIds) {
+    try {
+      if (!Array.isArray(playerIds) || playerIds.length === 0) {
+        throw new Error('Player IDs must be a non-empty array')
+      }
+
+      const players = await this.getPlayersCache()
+      const results = []
+
+      for (const playerId of playerIds) {
+        const player = players[playerId]
+        
+        if (player) {
+          results.push({
+            player_id: playerId,
+            ...player
+          })
+        } else {
+          results.push({
+            player_id: playerId,
+            error: 'Not Found'
+          })
+        }
+      }
+
+      return results
+    } catch (error) {
+      logger.error('Error searching players by IDs:', error)
+      throw new Error('Failed to search players by IDs')
+    }
+  }
+
   async searchPlayersByName(searchTerm, limit = 10) {
     try {
       if (!searchTerm || searchTerm.trim().length < 2) {

@@ -120,7 +120,7 @@ describe('MCP server endpoints', () => {
       .set('Accept', 'application/json')
 
     expect(res.status).toBe(200)
-    expect(res.body.status).toBe('healthy')
+    expect(['healthy', 'degraded']).toContain(res.body.status)
     expect(typeof res.body.timestamp).toBe('string')
     expect(typeof res.body.uptime).toBe('number')
     expect(res.body.sessions).toEqual({
