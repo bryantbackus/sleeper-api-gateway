@@ -46,7 +46,7 @@ mochawesome-report/
 data/test-database.sqlite*
 *test*.sqlite*
 test-data/
-fixtures/
+
 
 # Newman output files (but keep our organized collections)
 newman/
