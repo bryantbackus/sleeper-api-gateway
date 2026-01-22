@@ -72,10 +72,6 @@ describe('Smoke tests for core endpoints', () => {
 
     const response = await request(app).get('/health')
 
-    // Debug: log the actual response
-    console.log('Response body:', JSON.stringify(response.body, null, 2))
-    console.log('Mock called:', mockGetCacheStatus.mock.calls.length)
-
     expect(response.status).toBe(200)
     expect(response.body).toMatchObject({
       status: 'healthy',

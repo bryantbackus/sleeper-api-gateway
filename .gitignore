@@ -26,6 +26,8 @@ tests/**
 !tests/automated/**/*.js
 !tests/smoke/
 !tests/smoke/**/*.js
+!tests/fixtures/
+!tests/fixtures/**/*.js
 test-results/
 test-reports/
 __tests__/
@@ -46,7 +48,7 @@ mochawesome-report/
 data/test-database.sqlite*
 *test*.sqlite*
 test-data/
-fixtures/
+
 
 # Newman output files (but keep our organized collections)
 newman/

@@ -102,6 +102,85 @@ router.get('/search/id/:playerId',
   }
 )
 
+// Search players by ID - Multiple IDs (POST with array in body)
+router.post('/search/id',
+  optionalAPIKey,
+  authAwareRateLimiters.searchEndpoints,
+  async (req, res) => {
+    try {
+      // Validate request body
+      if (!req.body || !req.body.ids) {
+        return res.status(400).json({
+          error: 'Bad request',
+          message: 'Request body must contain an "ids" array'
+        })
+      }
+
+      if (!Array.isArray(req.body.ids)) {
+        return res.status(400).json({
+          error: 'Bad request',
+          message: 'The "ids" field must be an array'
+        })
+      }
+
+      if (req.body.ids.length === 0) {
+        return res.status(400).json({
+          error: 'Bad request',
+          message: 'The "ids" array cannot be empty'
+        })
+      }
+
+      // Validate all IDs are strings/numbers
+      const invalidIds = req.body.ids.filter(id => typeof id !== 'string' && typeof id !== 'number')
+      if (invalidIds.length > 0) {
+        return res.status(400).json({
+          error: 'Bad request',
+          message: 'All player IDs must be strings or numbers',
+          invalidIds
+        })
+      }
+
+      const playerIds = req.body.ids.map(id => String(id))
+      const results = await playerSearchService.searchPlayersByIds(playerIds)
+      
+      // Separate found and not found players
+      const foundPlayers = results.filter(r => !r.error)
+      const notFoundPlayers = results.filter(r => r.error === 'Not Found')
+      
+      // If no players found, return 404
+      if (foundPlayers.length === 0) {
+        logger.info('No players found for IDs:', { playerIds, count: playerIds.length })
+        return res.status(404).json({
+          error: 'No players found',
+          message: `No players found for the provided IDs`,
+          requested_ids: playerIds,
+          results: results
+        })
+      }
+      
+      // Return 200 with results (including "Not Found" entries)
+      logger.info('Players retrieved by IDs:', { 
+        requestedCount: playerIds.length,
+        foundCount: foundPlayers.length,
+        notFoundCount: notFoundPlayers.length
+      })
+      
+      res.status(200).json({
+        total_requested: playerIds.length,
+        found: foundPlayers.length,
+        not_found: notFoundPlayers.length,
+        results: results
+      })
+    } catch (error) {
+      logger.error('Error searching players by IDs:', error)
+      res.status(500).json({
+        error: 'Failed to search players',
+        message: error.message
+      })
+    }
+  }
+)
+
 // Search players by name
 router.get('/search/name',
   optionalAPIKey,

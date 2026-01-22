@@ -1,8 +1,12 @@
 const rateLimit = require('express-rate-limit')
 const logger = require('../config/logger')
 
+const rateLimitEnabled = process.env.RATE_LIMIT_ENABLED !== 'false'
+const noopLimiter = (req, res, next) => next()
+const createLimiter = (options) => (rateLimitEnabled ? rateLimit(options) : noopLimiter)
+
 // Rate limiter for general API requests
-const generalLimiter = rateLimit({
+const generalLimiter = createLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // Limit each IP to 100 requests per windowMs
   message: {
@@ -26,7 +30,7 @@ const generalLimiter = rateLimit({
 
 
 // Rate limiter for authentication endpoints
-const authLimiter = rateLimit({
+const authLimiter = createLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // Limit each IP to 10 auth attempts per 15 minutes
   message: {
@@ -49,9 +53,34 @@ const authLimiter = rateLimit({
   }
 })
 
+// Rate limiter for Sleeper API endpoints
+const sleeperApiLimiter = createLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 50, // Limit each IP to 50 Sleeper API requests per 15 minutes
+  message: {
+    error: 'Too many Sleeper API requests',
+    message: 'Rate limit exceeded for Sleeper API endpoints. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn('Sleeper API rate limit exceeded:', {
+      ip: req.ip,
+      userAgent: req.get('User-Agent'),
+      path: req.path
+    })
+    res.status(429).json({
+      error: 'Too many Sleeper API requests',
+      message: 'Rate limit exceeded for Sleeper API endpoints. Please try again later.'
+    })
+  }
+})
+
 module.exports = {
   generalLimiter,
-  authLimiter
+  authLimiter,
+  sleeperApiLimiter,
+  rateLimitEnabled
 }
 
 // Note: Auth-aware rate limiters are available in authAwareRateLimit.js

@@ -39,7 +39,20 @@ class CacheService {
       
       if (!lastRefresh) {
         logger.info('No cache found, performing initial refresh')
-        await this.refreshPlayerCache()
+        try {
+          await this.refreshPlayerCache()
+        } catch (refreshError) {
+          logger.error('Error during initial cache refresh:', refreshError)
+          // Schedule async retry but don't throw
+          if (typeof setTimeout === 'function') {
+            setTimeout(() => {
+              this.refreshPlayerCache().catch((retryError) => {
+                logger.error('Asynchronous cache refresh failed after initial error:', retryError)
+              })
+            }, 0)
+            logger.warn('Scheduled asynchronous cache refresh after initial failure')
+          }
+        }
         return
       }
 
@@ -48,7 +61,20 @@ class CacheService {
       
       if (daysSinceRefresh >= 1) {
         logger.info(`Cache is ${daysSinceRefresh} days old, refreshing`)
-        await this.refreshPlayerCache()
+        try {
+          await this.refreshPlayerCache()
+        } catch (refreshError) {
+          logger.error('Error during cache refresh:', refreshError)
+          // Schedule async retry but don't throw
+          if (typeof setTimeout === 'function') {
+            setTimeout(() => {
+              this.refreshPlayerCache().catch((retryError) => {
+                logger.error('Asynchronous cache refresh failed after refresh error:', retryError)
+              })
+            }, 0)
+            logger.warn('Scheduled asynchronous cache refresh after refresh failure')
+          }
+        }
       } else {
         logger.info('Cache is up to date')
       }

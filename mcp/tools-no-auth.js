@@ -5,6 +5,7 @@
 import { callSleeperAPI, log } from './shared_utils.js'
 import { z } from "zod";
 import { USER_SESSIONS, checkMcpRateLimit } from './shared_utils.js'
+import { CONFIG } from './config.js'
 
 // Tools that don't require authentication (use optionalAPIKey middleware)
 const MCP_TOOLS_NO_AUTH = {

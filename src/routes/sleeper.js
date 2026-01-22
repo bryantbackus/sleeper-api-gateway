@@ -147,7 +147,7 @@ router.get('/league/:leagueId/rosters',
       const { leagueId } = req.params
       const rosters = await sleeperService.getLeagueRosters(leagueId)
       
-      logger.info('League rosters retrieved:', { leagueId, count: rosters.length })
+      logger.info('League rosters retrieved:', { leagueId, count: rosters?.length || 0 })
       res.json(rosters)
     } catch (error) {
       logger.error('Error fetching league rosters:', error)
