@@ -26,6 +26,8 @@ tests/**
 !tests/automated/**/*.js
 !tests/smoke/
 !tests/smoke/**/*.js
+!tests/fixtures/
+!tests/fixtures/**/*.js
 test-results/
 test-reports/
 __tests__/
