@@ -1,3 +1,5 @@
+process.env.RATE_LIMIT_ENABLED = 'true'
+
 const request = require('supertest')
 const express = require('express')
 const { generateAPIKey } = require('../../src/middleware/simpleAuth')
@@ -44,15 +46,15 @@ describe('Middleware Tests - Rate Limiters', () => {
       expect(response.body.success).toBe(true)
     })
 
-    test('should include rate limit headers', async () => {
+    test('should include rate limit headers when enabled', async () => {
       app.use(generalLimiter)
       app.get('/test', (req, res) => res.json({ success: true }))
 
       const response = await request(app)
         .get('/test')
 
-      // Rate limiting headers might be present
       expect(response.status).toBe(200)
+      expect(response.headers['ratelimit-limit']).toBeDefined()
     })
 
     test('should handle multiple requests', async () => {
@@ -66,9 +68,9 @@ describe('Middleware Tests - Rate Limiters', () => {
 
       const responses = await Promise.all(requests)
       
-      // Most should succeed (depends on rate limit settings)
-      const successCount = responses.filter(r => r.status === 200).length
-      expect(successCount).toBeGreaterThan(0)
+      responses.forEach(response => {
+        expect(response.status).toBe(200)
+      })
     })
   })
 
@@ -95,9 +97,8 @@ describe('Middleware Tests - Rate Limiters', () => {
 
       const responses = await Promise.all(requests)
       
-      // Should handle auth requests appropriately
       responses.forEach(response => {
-        expect([200, 429]).toContain(response.status)
+        expect(response.status).toBe(200)
       })
     })
   })
@@ -125,9 +126,8 @@ describe('Middleware Tests - Rate Limiters', () => {
 
       const responses = await Promise.all(requests)
       
-      // Should handle requests appropriately
       responses.forEach(response => {
-        expect([200, 429]).toContain(response.status)
+        expect(response.status).toBe(200)
       })
     })
 
@@ -169,7 +169,7 @@ describe('Middleware Tests - Rate Limiters', () => {
 
       // Second immediate request should be rate limited
       const response2 = await request(app).get('/test')
-      expect([200, 429]).toContain(response2.status)
+      expect(response2.status).toBe(429)
     })
 
     test('should include proper error message when rate limited', async () => {
@@ -204,7 +204,7 @@ describe('Middleware Tests - Rate Limiters', () => {
         .get('/protected')
         .set('X-API-Key', apiKey)
 
-      expect([200, 429]).toContain(response.status)
+      expect(response.status).toBe(200)
     })
 
     test('should handle requests without API key', async () => {

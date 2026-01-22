@@ -1,4 +1,9 @@
-const database = require('../../src/config/database')
+jest.mock('../../src/config/database', () => ({
+  connect: jest.fn(),
+  close: jest.fn(),
+  get: jest.fn(),
+  run: jest.fn()
+}))
 
 // Mock axios before importing services
 jest.mock('axios', () => ({
@@ -11,6 +16,7 @@ jest.mock('axios', () => ({
   }))
 }))
 
+const database = require('../../src/config/database')
 const sleeperService = require('../../src/services/sleeperService')
 const cacheService = require('../../src/services/cacheService')
 const playerSearchService = require('../../src/services/playerSearchService')
@@ -21,12 +27,9 @@ describe('Services Tests - Comprehensive Coverage', () => {
     process.env.NODE_ENV = 'test'
     process.env.SLEEPER_BASE_URL = 'https://api.sleeper.app/v1'
     process.env.DEFAULT_USER_ID = 'test-user-123'
-    
-    await database.connect()
   })
 
   afterAll(async () => {
-    await database.close()
     jest.restoreAllMocks()
   })
 
@@ -51,24 +54,26 @@ describe('Services Tests - Comprehensive Coverage', () => {
       })
 
       test('should calculate delay correctly', () => {
-        // Test the calculateDelay method with tolerance for jitter (up to 25% variance)
+        const randomSpy = jest.spyOn(Math, 'random').mockReturnValue(0.5)
+
         const delay0 = sleeperService.calculateDelay(0)
         const delay1 = sleeperService.calculateDelay(1)
         const delay2 = sleeperService.calculateDelay(2)
-        
-        expect(delay0).toBeGreaterThanOrEqual(1000)
-        expect(delay0).toBeLessThanOrEqual(2000) // Increased tolerance for random jitter
-        expect(delay1).toBeGreaterThanOrEqual(2000)
-        expect(delay1).toBeLessThanOrEqual(3000) // Increased tolerance for random jitter
-        expect(delay2).toBeGreaterThanOrEqual(4000)
-        expect(delay2).toBeLessThanOrEqual(6000) // Increased tolerance for random jitter
+
+        expect(delay0).toBe(1500)
+        expect(delay1).toBe(2500)
+        expect(delay2).toBe(4500)
+
+        randomSpy.mockRestore()
       })
 
       test('should handle delay function', async () => {
-        const start = Date.now()
-        await sleeperService.delay(10) // 10ms delay
-        const end = Date.now()
-        expect(end - start).toBeGreaterThanOrEqual(5)
+        jest.useFakeTimers()
+        const delayPromise = sleeperService.delay(25)
+
+        jest.advanceTimersByTime(25)
+        await expect(delayPromise).resolves.toBeUndefined()
+        jest.useRealTimers()
       })
     })
 
@@ -129,8 +134,7 @@ describe('Services Tests - Comprehensive Coverage', () => {
     describe('Cache Operations', () => {
       test('should check cache age and refresh if needed', async () => {
         // Mock old cache data
-        const mockGet = jest.spyOn(database, 'get')
-        mockGet.mockResolvedValueOnce({ 
+        database.get.mockResolvedValueOnce({
           value: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString() // 25 hours ago
         })
 
@@ -140,14 +144,11 @@ describe('Services Tests - Comprehensive Coverage', () => {
         await cacheService.checkAndRefreshIfNeeded()
         
         expect(refreshSpy).toHaveBeenCalled()
-        
-        mockGet.mockRestore()
         refreshSpy.mockRestore()
       })
 
       test('should not refresh if cache is fresh', async () => {
-        const mockGet = jest.spyOn(database, 'get')
-        mockGet.mockResolvedValueOnce({ 
+        database.get.mockResolvedValueOnce({
           value: new Date().toISOString() // Current time
         })
 
@@ -157,8 +158,6 @@ describe('Services Tests - Comprehensive Coverage', () => {
         await cacheService.checkAndRefreshIfNeeded()
         
         expect(refreshSpy).not.toHaveBeenCalled()
-        
-        mockGet.mockRestore()
         refreshSpy.mockRestore()
       })
 
@@ -173,50 +172,38 @@ describe('Services Tests - Comprehensive Coverage', () => {
       })
 
       test('should get cached players', async () => {
-        const mockGet = jest.spyOn(database, 'get')
-        mockGet.mockResolvedValue({ 
+        database.get.mockResolvedValue({
           data: JSON.stringify({ 'player1': { full_name: 'Test Player' } })
         })
 
         const result = await cacheService.getAllPlayers()
         expect(result).toHaveProperty('player1')
-        
-        mockGet.mockRestore()
       })
 
       test('should handle missing cached players', async () => {
-        const mockGet = jest.spyOn(database, 'get')
-        mockGet.mockResolvedValue(null)
+        database.get.mockResolvedValue(null)
 
         await expect(cacheService.getAllPlayers()).rejects.toThrow('Failed to retrieve cached players')
-        
-        mockGet.mockRestore()
       })
 
       test('should get trending players', async () => {
-        const mockGet = jest.spyOn(database, 'get')
-        mockGet.mockResolvedValue({ 
+        database.get.mockResolvedValue({
           data: JSON.stringify([{ player_id: 'player1', count: 50 }])
         })
 
         const result = await cacheService.getTrendingPlayers('add')
         expect(Array.isArray(result)).toBe(true)
-        
-        mockGet.mockRestore()
       })
 
       test('should get cache status', async () => {
-        const mockGet = jest.spyOn(database, 'get')
-        mockGet.mockResolvedValueOnce({ value: new Date().toISOString() })
-        mockGet.mockResolvedValueOnce({ data: JSON.stringify({ test: 'data' }) })
-        mockGet.mockResolvedValueOnce({ data: JSON.stringify([{ test: 'trending' }]) })
+        database.get.mockResolvedValueOnce({ value: new Date().toISOString() })
+        database.get.mockResolvedValueOnce({ data: JSON.stringify({ test: 'data' }) })
+        database.get.mockResolvedValueOnce({ data: JSON.stringify([{ test: 'trending' }]) })
 
         const result = await cacheService.getCacheStatus()
         expect(result).toHaveProperty('lastRefresh')
         expect(result).toHaveProperty('playersDataSize')
         expect(result).toHaveProperty('trendingAddDataSize')
-        
-        mockGet.mockRestore()
       })
     })
   })
@@ -279,6 +266,20 @@ describe('Services Tests - Comprehensive Coverage', () => {
       const result = await playerSearchService.searchPlayerById('1')
       // Will be null since player doesn't exist in test data
       expect(result).toBeNull()
+    })
+
+    test('should search players by IDs with mixed results', async () => {
+      const result = await playerSearchService.searchPlayersByIds(['player1', 'missing', 'player3'])
+
+      expect(result).toHaveLength(3)
+      expect(result[0].player_id).toBe('player1')
+      expect(result[1]).toMatchObject({ player_id: 'missing', error: 'Not Found' })
+      expect(result[2].player_id).toBe('player3')
+    })
+
+    test('should reject invalid IDs array', async () => {
+      await expect(playerSearchService.searchPlayersByIds('player1')).rejects.toThrow('Failed to search players by IDs')
+      await expect(playerSearchService.searchPlayersByIds([])).rejects.toThrow('Failed to search players by IDs')
     })
 
     test('should handle cache errors gracefully', async () => {

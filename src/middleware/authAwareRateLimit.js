@@ -1,6 +1,9 @@
 const rateLimit = require('express-rate-limit')
 const logger = require('../config/logger')
 
+const rateLimitEnabled = process.env.RATE_LIMIT_ENABLED !== 'false'
+const noopLimiter = (req, res, next) => next()
+
 /**
  * Creates an auth-aware rate limiter that provides different limits based on authentication status
  * @param {Object} options - Configuration options
@@ -26,6 +29,10 @@ const createAuthAwareRateLimit = (options = {}) => {
            ip === '::1' || 
            ip === 'localhost' ||
            ip?.startsWith('172.')  // Docker default network
+  }
+
+  if (!rateLimitEnabled) {
+    return noopLimiter
   }
 
   return rateLimit({
