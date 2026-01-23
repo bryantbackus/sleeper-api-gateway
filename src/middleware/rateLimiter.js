@@ -1,7 +1,8 @@
 const rateLimit = require('express-rate-limit')
 const logger = require('../config/logger')
 
-const rateLimitEnabled = process.env.RATE_LIMIT_ENABLED !== 'false'
+const rateLimitEnabled = !process.env.RATE_LIMIT_ENABLED || 
+  process.env.RATE_LIMIT_ENABLED.toLowerCase() !== 'false'
 const noopLimiter = (req, res, next) => next()
 const createLimiter = (options) => (rateLimitEnabled ? rateLimit(options) : noopLimiter)
 
@@ -82,6 +83,3 @@ module.exports = {
   sleeperApiLimiter,
   rateLimitEnabled
 }
-
-// Note: Auth-aware rate limiters are available in authAwareRateLimit.js
-// This keeps this file focused on traditional rate limiting

@@ -14,6 +14,7 @@
     "test:postman": "newman run tests/postman/Sleeper_API_Middleware_Consolidated.postman_collection.json -e tests/postman/Consolidated_Environment.json --reporters cli",
     "lint": "eslint src/ tests/ scripts/",
     "lint:fix": "eslint src/ tests/ scripts/ --fix",
+    "lint:openapi": "redocly lint openapi.json",
     "setup": "node scripts/manage.js",
     "setup:docker": "node scripts/docker-setup.js",
     "docker:build": "docker-compose build",
@@ -56,6 +57,7 @@
     "winston": "^3.11.0"
   },
   "devDependencies": {
+    "@redocly/cli": "^1.34.6",
     "eslint": "^8.56.0",
     "eslint-config-standard": "^17.1.0",
     "eslint-plugin-import": "^2.29.1",
