@@ -1,0 +1,32 @@
+name: OpenAPI Lint
+
+on:
+  pull_request:
+    paths:
+      - openapi.json
+      - .github/workflows/openapi.yml
+  push:
+    branches:
+      - main
+    paths:
+      - openapi.json
+      - .github/workflows/openapi.yml
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint OpenAPI
+        run: npm run lint:openapi
