@@ -82,15 +82,16 @@ services:
       retries: 3
       start_period: 10s
 
-  # Optional: Certbot for SSL certificates (production)
+  # Certbot for SSL certificates (production)
   certbot:
     image: certbot/certbot
     container_name: sleeper-certbot
-    restart: "no"
+    restart: unless-stopped
     volumes:
       - ./nginx/ssl:/etc/letsencrypt
       - certbot_data:/var/www/certbot
-    command: certonly --webroot --webroot-path=/var/www/certbot --email ${SSL_EMAIL} --agree-tos --no-eff-email -d ${DOMAIN:-localhost}
+    # command: certonly --webroot --webroot-path=/var/www/certbot --email ${SSL_EMAIL} --agree-tos --no-eff-email -d ${DOMAIN:-localhost}
+    entrypoint: /bin/sh -c "while true; do certbot renew --webroot --webroot-path=/var/www/certbot; sleep 604800; done"
     depends_on:
       nginx:
         condition: service_healthy
