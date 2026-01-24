@@ -1,7 +1,8 @@
 const rateLimit = require('express-rate-limit')
 const logger = require('../config/logger')
 
-const rateLimitEnabled = process.env.RATE_LIMIT_ENABLED !== 'false'
+const rateLimitEnabled = !process.env.RATE_LIMIT_ENABLED || 
+  process.env.RATE_LIMIT_ENABLED.toLowerCase() !== 'false'
 const noopLimiter = (req, res, next) => next()
 
 /**
