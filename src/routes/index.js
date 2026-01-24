@@ -1,9 +1,6 @@
 const express = require('express')
 const logger = require('../config/logger')
 const cacheService = require('../services/cacheService')
-const fs = require('fs')
-const path = require('path')
-
 const router = express.Router()
 
 // Health check endpoint
@@ -78,17 +75,25 @@ router.get('/health', async (req, res) => {
   }
 })
 
-// OpenAPI specification endpoint
+// Cache OpenAPI specification
+const fs = require('fs')
+const path = require('path')
+
+const specPath = path.join(__dirname, '../../openapi.json')
+let openapiSpec = null
+
+try {
+  openapiSpec = JSON.parse(fs.readFileSync(specPath, 'utf8'))
+} catch (error) {
+  logger.error('Failed to load OpenAPI spec at startup:', error)
+}
+
 router.get('/openapi.json', (req, res) => {
-  try {
-    const specPath = path.join(__dirname, '../../openapi.json')
-    const spec = JSON.parse(fs.readFileSync(specPath, 'utf8'))
-    res.setHeader('Content-Type', 'application/json')
-    res.json(spec)
-  } catch (error) {
-    logger.error('Error serving OpenAPI spec:', error)
-    res.status(500).json({ error: 'Failed to load API specification' })
+  if (!openapiSpec) {
+    return res.status(500).json({ error: 'Failed to load API specification' })
   }
+  res.setHeader('Content-Type', 'application/json')
+  res.json(openapiSpec)
 })
 
 // API information endpoint

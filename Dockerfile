@@ -17,6 +17,7 @@ RUN groupadd --gid 1001 nodejs && \
 
 # Copy application code
 COPY src/ ./src/
+COPY openapi.json ./openapi.json
 
 # Create data directory with proper permissions
 RUN mkdir -p data && chown -R nodejs:nodejs /app
