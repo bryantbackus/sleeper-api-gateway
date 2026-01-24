@@ -1,6 +1,8 @@
 const express = require('express')
 const logger = require('../config/logger')
 const cacheService = require('../services/cacheService')
+const fs = require('fs')
+const path = require('path')
 
 const router = express.Router()
 
@@ -77,11 +79,25 @@ router.get('/health', async (req, res) => {
   }
 })
 
+// OpenAPI specification endpoint
+router.get('/openapi.json', (req, res) => {
+  try {
+    const specPath = path.join(__dirname, '../../openapi.json')
+    const spec = JSON.parse(fs.readFileSync(specPath, 'utf8'))
+    res.setHeader('Content-Type', 'application/json')
+    res.json(spec)
+  } catch (error) {
+    logger.error('Error serving OpenAPI spec:', error)
+    res.status(500).json({ error: 'Failed to load API specification' })
+  }
+})
+
 // API information endpoint
 router.get('/', (req, res) => {
   res.json({
     name: 'Sleeper API Gateway',
     version: '1.0.0',
+    openapi: '/openapi.json',
     description: 'API gateway for Sleeper fantasy football API with caching and authentication',
     documentation: {
       auth: '/auth - API key management and authentication',
